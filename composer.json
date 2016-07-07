@@ -1,0 +1,23 @@
+{
+  "name": "lazarchik/pretend-db",
+  "description": "Drop-in mock replacement for MySQL to be used in Doctrine",
+  "version": "0.0.1",
+  "authors": [
+    {
+      "name": "Eugene Lazarchik",
+      "email": "evgenius.lazarchik@gmail.com"
+    }
+  ],
+  "require": {
+    "doctrine/dbal": "v2.5.x-dev",
+    "phpunit/phpunit": "4.8.*"
+  },
+  "require-dev": {
+    "doctrine/orm": "2.5.*"
+  },
+  "autoload": {
+    "psr-4": {
+      "PretendDb\\": "src/PretendDb/"
+    }
+  }
+}
