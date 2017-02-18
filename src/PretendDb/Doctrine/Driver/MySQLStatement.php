@@ -8,9 +8,32 @@ namespace PretendDb\Doctrine\Driver;
 
 
 use Doctrine\DBAL\Driver\Statement;
+use PhpMyAdmin\SqlParser\Components\Condition;
+use PhpMyAdmin\SqlParser\Parser;
+use PhpMyAdmin\SqlParser\Statements\InsertStatement;
+use PhpMyAdmin\SqlParser\Statements\SelectStatement;
 
 class MySQLStatement implements \IteratorAggregate, Statement
 {
+    /** @var MySQLStorage */
+    protected $storage;
+    
+    /** @var string */
+    protected $queryString;
+    
+    /** @var array */
+    protected $boundParams = [];
+    
+    /**
+     * @param MySQLStorage $objStorage
+     * @param string $objQueryString
+     */
+    public function __construct(MySQLStorage $objStorage, $objQueryString)
+    {
+        $this->storage = $objStorage;
+        $this->queryString = $objQueryString;
+    }
+
     /**
      * Closes the cursor, enabling the statement to be executed again.
      *
@@ -66,6 +89,7 @@ class MySQLStatement implements \IteratorAggregate, Statement
      */
     public function fetch($fetchMode = null)
     {
+        var_dump("\fetching");
         // TODO: Implement fetch() method.
         return false;
     }
@@ -119,6 +143,10 @@ class MySQLStatement implements \IteratorAggregate, Statement
      */
     public function bindValue($param, $value, $type = null)
     {
+        echo "bindValue($param, $value, $type)\n";
+        
+        $this->boundParams[$param] = $value;
+        
         // TODO: Implement bindValue() method.
         return true;
     }
@@ -182,6 +210,88 @@ class MySQLStatement implements \IteratorAggregate, Statement
     }
 
     /**
+     * @param Condition $conditionStatement
+     */
+    protected function parseCondition($conditionStatement)
+    {
+        return $conditionStatement->expr;
+    }
+    
+    /**
+     * @param SelectStatement $selectStatement
+     */
+    protected function prepareSelect($selectStatement)
+    {
+        $fromStatement = $selectStatement->from[0];
+        
+        $table = $fromStatement->table;
+        $tableAlias = $fromStatement->alias;
+        
+        $conditionStrings = [];
+        foreach ($selectStatement->where as $condition) {
+            $conditionStrings[] = $this->parseCondition($condition);
+        }
+        
+        $fullCondition = join(" ", $conditionStrings);
+        
+        var_dump("\$fullCondition", $fullCondition);
+        
+        return true;
+    }
+
+    /**
+     * @param string $value
+     * @return mixed
+     */
+    protected function evaluateValue($value)
+    {
+        if ("?" == $value) {
+            return array_shift($this->boundParams);
+        }
+        
+        return $value;
+    }
+
+    /**
+     * @param string $tableName
+     * @param string[] $columns
+     * @param array $valueFields
+     */
+    protected function insertRow($tableName, $columns, $valueFields)
+    {
+        $reindexedValues = [];
+        
+        foreach ($columns as $columnIndex => $columnName) {
+            $value = $valueFields[$columnIndex];
+            
+            $reindexedValues[$columnName] = $this->evaluateValue($value);
+        }
+        
+        $storageTable = $this->storage->getTable($tableName);
+        
+        $storageTable->insertRow($reindexedValues);
+    }
+    
+    /**
+     * @param InsertStatement $insertStatement
+     */
+    protected function prepareInsert($insertStatement)
+    {
+        $intoStatement = $insertStatement->into;
+        
+        $tableName = $intoStatement->dest->table;
+        $columns = $intoStatement->columns;
+        
+        $values = $insertStatement->values;
+        
+        foreach ($values as $valueFields) {
+            $this->insertRow($tableName, $columns, $valueFields->values);
+        }
+        
+        return true;
+    }
+
+    /**
      * Executes a prepared statement
      *
      * If the prepared statement included parameter markers, you must either:
@@ -198,8 +308,21 @@ class MySQLStatement implements \IteratorAggregate, Statement
      */
     public function execute($params = null)
     {
-        // TODO: Implement execute() method.
-        return true;
+        echo "execute with query \"".$this->queryString."\" with params:\n".var_export($this->boundParams, true)."\n";
+        
+        $parser = new Parser($this->queryString);
+        
+        $parsedStatement = $parser->statements[0];
+        
+        switch (true) {
+            case $parsedStatement instanceof SelectStatement:
+                return $this->prepareSelect($parsedStatement);
+            case $parsedStatement instanceof InsertStatement:
+                return $this->prepareInsert($parsedStatement);
+
+            default:
+                return true;
+        }
     }
 
     /**

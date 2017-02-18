@@ -8,43 +8,114 @@ namespace PretendDb;
 
 
 use Doctrine\Common\Cache\ArrayCache;
+use Doctrine\DBAL\Connection;
 use Doctrine\ORM\Configuration;
 use Doctrine\ORM\EntityManager;
 use Doctrine\Tests\DBAL\Driver\AbstractMySQLDriverTest;
 use Entities\User;
 use PretendDb\Doctrine\Driver\MySQL;
+use PretendDb\Doctrine\Driver\MySQLColumnMeta;
 
 class PretendDbTest extends AbstractMySQLDriverTest
 {
+    /** @var MySQL */
+    protected $driver;
+    
+    /** @var EntityManager */
+    protected $entityMgr;
+    
+    public function setUp()
+    {
+        parent::setUp();
+        
+        $this->driver = new MySQL();
+        
+        $this->driver->getStorage()->createTable("users", [
+            new MySQLColumnMeta("id"),
+            new MySQLColumnMeta("name"),
+        ]);
+        
+        $this->entityMgr = $this->getEntityManager();
+    }
+
+    /**
+     * @return EntityManager
+     */
     public function getEntityManager()
     {
-        $objMetadataCache = new ArrayCache;
+        $metadataCache = new ArrayCache;
         
-        $objOrmConfig = new Configuration();
-        $objOrmConfig->setMetadataCacheImpl($objMetadataCache);
+        $config = new Configuration();
+        $config->setMetadataCacheImpl($metadataCache);
         
-        $objOrmMetaDriver = $objOrmConfig->newDefaultAnnotationDriver([__DIR__.'/Entities'], false);
-        $objOrmConfig->setMetadataDriverImpl($objOrmMetaDriver);
+        $ormMetaDriver = $config->newDefaultAnnotationDriver([__DIR__.'/Entities'], false);
+        $config->setMetadataDriverImpl($ormMetaDriver);
         
-        $objOrmConfig->setProxyDir("/tmp/doctrine/proxies");
-        $objOrmConfig->setProxyNamespace("DoctrineProxies");
+        $config->setProxyDir("/tmp/doctrine/proxies");
+        $config->setProxyNamespace("DoctrineProxies");
         
-        $objEntityManager = EntityManager::create(['driverClass' => MySQL::class], $objOrmConfig);
+        $connection = new Connection([], $this->driver, $config, null);
         
-        return $objEntityManager;
+        $entityManager = EntityManager::create($connection, $config);
+        
+        return $entityManager;
     }
 
     protected function createDriver()
     {
-        return new \PretendDb\Doctrine\Driver\MySQL();
+        return $this->driver;
     }
     
-    public function testBlah()
+    public function testBlah1()
     {
-        $objEntityMgr = $this->getEntityManager();
+        $objEntityMgr = $this->entityMgr;
+
+        $this->assertNull($objEntityMgr->find(User::class, 1), "We haven't created the user yet");
         
-        $objUser = $objEntityMgr->find(User::class, 1);
+        $userEntity = new User();
+        $userEntity->id = 1;
+        $userEntity->name = "new_user";
         
-        //$this->assertInstanceOf(User::class, $objUser, "find() should return an instance of the requested entity");
+        $objEntityMgr->persist($userEntity);
+        $objEntityMgr->flush();
+        
+        $objEntityMgr->clear();
+        
+        var_dump($this->driver->getStorage()->getTable("users"));
+        
+        $userEntity = $objEntityMgr->getRepository(User::class)->findBy([
+            "id" => $userEntity->id,
+            "name" => $userEntity->name,
+        ]);
+        
+        
+        $this->assertInstanceOf(User::class, $userEntity, "find() should return an instance of the requested entity");
+    }
+    
+    public function testBlah2()
+    {
+        $objEntityMgr = $this->entityMgr;
+
+        $this->assertNull($objEntityMgr->find(User::class, 1), "We haven't created the user yet");
+        
+        $userEntity = new User();
+        $userEntity->id = 1;
+        $userEntity->name = "new_user";
+        
+        $objEntityMgr->persist($userEntity);
+        $objEntityMgr->flush();
+        
+        $objEntityMgr->clear();
+        
+        $preparedStatement = $objEntityMgr->getConnection()
+            ->prepare("Select * from users where (id < if(id, 1, 10) or (id2 = ? and name=?))");
+        
+        //$preparedStatement->bindValue(1, 1);
+        $preparedStatement->bindValue(1, 2);
+        $preparedStatement->bindValue(2, "test");
+        
+        $result = $preparedStatement->execute();
+        
+        var_dump("\result", $result);
     }
 }

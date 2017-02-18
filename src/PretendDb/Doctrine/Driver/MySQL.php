@@ -12,6 +12,14 @@ use Doctrine\DBAL\Driver\AbstractMySQLDriver;
  */
 class MySQL extends AbstractMySQLDriver
 {
+    /** @var MySQLStorage */
+    protected $storage;
+
+    public function __construct()
+    {
+        $this->storage = new MySQLStorage();
+    }
+    
     /**
      * @return string
      */
@@ -22,6 +30,14 @@ class MySQL extends AbstractMySQLDriver
     
     public function connect(array $params, $username = null, $password = null, array $driverOptions = [])
     {
-        return new MySQLConnection();
+        return new MySQLConnection($this->storage);
+    }
+
+    /**
+     * @return MySQLStorage
+     */
+    public function getStorage()
+    {
+        return $this->storage;
     }
 }

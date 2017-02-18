@@ -10,9 +10,20 @@ use Doctrine\DBAL\Driver\Connection;
 
 class MySQLConnection implements Connection
 {
+    /** @var MySQLStorage */
+    protected $storage;
+
+    /**
+     * @param MySQLStorage $storage
+     */
+    public function __construct($storage)
+    {
+        $this->storage = $storage;
+    }
+    
     public function prepare($prepareString)
     {
-        return new MySQLStatement();
+        return new MySQLStatement($this->storage, $prepareString);
     }
     
     public function query()
@@ -37,17 +48,17 @@ class MySQLConnection implements Connection
     
     public function beginTransaction()
     {
-        throw new \RuntimeException("Not implemented yet");
+        // @FIXME: implement this
     }
     
     public function commit()
     {
-        throw new \RuntimeException("Not implemented yet");
+        // @FIXME: implement this
     }
     
     public function rollBack()
     {
-        throw new \RuntimeException("Not implemented yet");
+        // @FIXME: implement this
     }
     
     public function errorCode()

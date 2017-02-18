@@ -20,5 +20,12 @@ class User
      * @ORM\Column(name="id", type="integer", nullable=false)
      * @ORM\Id
      */
-    protected $intId;
+    public $id;
+
+    /**
+     * @var string
+     *
+     * @ORM\Column(name="name", type="string", nullable=false)
+     */
+    public $name;
 }
