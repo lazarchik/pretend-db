@@ -9,37 +9,37 @@ namespace PretendDb\Doctrine\Driver\Parser;
 
 class Token
 {
-    const TYPE_OPENING_PARENTHESIS                      = "(";
-    const TYPE_CLOSING_PARENTHESIS                      = ")";
-    const TYPE_PLUS                                     = "+";
-    const TYPE_MINUS                                    = "-";
-    const TYPE_MULTIPLICATION                           = "*";
-    const TYPE_DIVISION                                 = "/";
-    const TYPE_EQUAL                                    = "=";
-    const TYPE_NOT_EQUAL                                = "!=";
-    const TYPE_GREATER_THAN                             = ">";
-    const TYPE_GREATER_THAN_OR_EQUAL                    = ">=";
-    const TYPE_LESS_THAN                                = "<";
-    const TYPE_LESS_THAN_OR_EQUAL                       = "<=";
-    const TYPE_OR                                       = "||";
-    const TYPE_AND                                      = "&&";
+    const TYPE_OPENING_PARENTHESIS                      = "OPENING_PARENTHESIS";
+    const TYPE_CLOSING_PARENTHESIS                      = "CLOSING_PARENTHESIS";
+    const TYPE_PLUS                                     = "PLUS";
+    const TYPE_MINUS                                    = "MINUS";
+    const TYPE_MULTIPLICATION                           = "MULTIPLICATION";
+    const TYPE_DIVISION                                 = "DIVISION";
+    const TYPE_EQUAL                                    = "EQUAL";
+    const TYPE_NOT_EQUAL                                = "NOT_EQUAL";
+    const TYPE_GREATER_THAN                             = "GREATER_THAN";
+    const TYPE_GREATER_THAN_OR_EQUAL                    = "GREATER_THAN_OR_EQUAL";
+    const TYPE_LESS_THAN                                = "LESS_THAN";
+    const TYPE_LESS_THAN_OR_EQUAL                       = "LESS_THAN_OR_EQUAL";
+    const TYPE_OR                                       = "OR";
+    const TYPE_AND                                      = "AND";
     const TYPE_XOR                                      = "XOR";
-    const TYPE_NOT                                      = "!";
-    const TYPE_NUMBER_LITERAL                           = "number";
-    const TYPE_STRING_LITERAL                           = "string";
-    const TYPE_DATETIME_LITERAL                         = "datetime";
-    const TYPE_HEXADECIMAL_LITERAL                      = "hexadecimal";
-    const TYPE_BIT_VALUE_LITERAL                        = "bit_value";
-    const TYPE_BOOLEAN_LITERAL                          = "boolean";
-    const TYPE_NULL_LITERAL                             = "null";
-    const TYPE_SIMPLE_PLACEHOLDER                       = "?";
-    const TYPE_NAMED_PLACEHOLDER                        = "named_placeholder";
-    const TYPE_PERIOD                                   = ".";
-    const TYPE_COMMA                                    = ",";
-    const TYPE_WHITESPACE                               = "whitespace";
-    const TYPE_IDENTIFIER                               = "identifier";
+    const TYPE_NOT                                      = "NOT";
+    const TYPE_NUMBER_LITERAL                           = "NUMBER_LITERAL";
+    const TYPE_STRING_LITERAL                           = "STRING_LITERAL";
+    const TYPE_DATETIME_LITERAL                         = "DATETIME_LITERAL";
+    const TYPE_HEXADECIMAL_LITERAL                      = "HEXADECIMAL_LITERAL";
+    const TYPE_BIT_VALUE_LITERAL                        = "BIT_VALUE_LITERAL";
+    const TYPE_BOOLEAN_LITERAL                          = "BOOLEAN_LITERAL";
+    const TYPE_NULL_LITERAL                             = "NULL_LITERAL";
+    const TYPE_SIMPLE_PLACEHOLDER                       = "SIMPLE_PLACEHOLDER";
+    const TYPE_NAMED_PLACEHOLDER                        = "NAMED_PLACEHOLDER";
+    const TYPE_PERIOD                                   = "PERIOD";
+    const TYPE_COMMA                                    = "COMMA";
+    const TYPE_WHITESPACE                               = "WHITESPACE";
+    const TYPE_IDENTIFIER                               = "IDENTIFIER";
     
-    /** @var int */
+    /** @var int|null */
     protected $type;
     
     /** @var string */
@@ -82,6 +82,15 @@ class Token
     }
 
     /**
+     * @param string $tokenSourceString
+     * @return Token
+     */
+    public static function initNot($tokenSourceString)
+    {
+        return new self(self::TYPE_NOT, $tokenSourceString);
+    }
+
+    /**
      * @param string $sourceString
      * @return Token
      */
@@ -114,7 +123,52 @@ class Token
      */
     public static function initEqual($sourceString)
     {
-        return new self(self::TYPE_PERIOD, $sourceString);
+        return new self(self::TYPE_EQUAL, $sourceString);
+    }
+
+    /**
+     * @param string $sourceString
+     * @return Token
+     */
+    public static function initNotEqual($sourceString)
+    {
+        return new self(self::TYPE_NOT_EQUAL, $sourceString);
+    }
+    
+    /**
+     * @param string $sourceString
+     * @return Token
+     */
+    public static function initGreaterThan($sourceString)
+    {
+        return new self(self::TYPE_GREATER_THAN, $sourceString);
+    }
+    
+    /**
+     * @param string $sourceString
+     * @return Token
+     */
+    public static function initGreaterThanOrEqual($sourceString)
+    {
+        return new self(self::TYPE_GREATER_THAN_OR_EQUAL, $sourceString);
+    }
+    
+    /**
+     * @param string $sourceString
+     * @return Token
+     */
+    public static function initLessThan($sourceString)
+    {
+        return new self(self::TYPE_LESS_THAN, $sourceString);
+    }
+    
+    /**
+     * @param string $sourceString
+     * @return Token
+     */
+    public static function initLessThanOrEqual($sourceString)
+    {
+        return new self(self::TYPE_LESS_THAN_OR_EQUAL, $sourceString);
     }
 
     /**
@@ -124,15 +178,6 @@ class Token
     public static function initSimplePlaceholder($sourceString)
     {
         return new self(self::TYPE_SIMPLE_PLACEHOLDER, $sourceString);
-    }
-
-    /**
-     * @param string $sourceString
-     * @return Token
-     */
-    public static function initLessThan($sourceString)
-    {
-        return new self(self::TYPE_LESS_THAN, $sourceString);
     }
 
     /**
@@ -170,12 +215,192 @@ class Token
     {
         return new self(self::TYPE_OR, $sourceString);
     }
+
+    /**
+     * @return Token
+     */
+    public static function initInvalidToken()
+    {
+        return new self(null, "");
+    }
+    
+    /*
+     * @return bool
+     */
+    public function isInvalidToken()
+    {
+        return null === $this->type;
+    }
+
+    /**
+     * @return string
+     */
+    public function dump()
+    {
+        if ($this->isInvalidToken()) {
+            return "INVALID_TOKEN";
+        }
+        
+        $dumpString = (string)$this->type;
+        
+        if (!in_array($this->type, [])) {
+            return $dumpString."(".$this->getSourceString().")";
+        }
+        
+        return $dumpString;
+    }
     
     /*
      * @return bool
      */
     public function isWhitespace()
     {
-        return self::TYPE_WHITESPACE == $this->type;
+        return self::TYPE_WHITESPACE === $this->type;
+    }
+    
+    /*
+     * @return bool
+     */
+    public function isIdentifier()
+    {
+        return self::TYPE_IDENTIFIER === $this->type;
+    }
+    
+    /*
+     * @return bool
+     */
+    public function isPeriod()
+    {
+        return self::TYPE_PERIOD === $this->type;
+    }
+    
+    /*
+     * @return bool
+     */
+    public function isNumberLiteral()
+    {
+        return self::TYPE_NUMBER_LITERAL === $this->type;
+    }
+    
+    /*
+     * @return bool
+     */
+    public function isEqual()
+    {
+        return self::TYPE_EQUAL === $this->type;
+    }
+    
+    /*
+     * @return bool
+     */
+    public function isNotEqual()
+    {
+        return self::TYPE_NOT_EQUAL === $this->type;
+    }
+    
+    /*
+     * @return bool
+     */
+    public function isGreaterThan()
+    {
+        return self::TYPE_GREATER_THAN === $this->type;
+    }
+    
+    /*
+     * @return bool
+     */
+    public function isGreaterThanOrEqual()
+    {
+        return self::TYPE_GREATER_THAN_OR_EQUAL === $this->type;
+    }
+    
+    /*
+     * @return bool
+     */
+    public function isLessThan()
+    {
+        return self::TYPE_LESS_THAN === $this->type;
+    }
+    
+    /*
+     * @return bool
+     */
+    public function isLessThanOrEqual()
+    {
+        return self::TYPE_LESS_THAN_OR_EQUAL === $this->type;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isComparisonOperator()
+    {
+        return $this->isEqual() || $this->isNotEqual()
+            || $this->isGreaterThan() || $this->isGreaterThanOrEqual()
+            || $this->isLessThan() || $this->isLessThanOrEqual();
+    }
+
+    /**
+     * @return bool
+     */
+    public function isOpeningParenthesis()
+    {
+        return self::TYPE_OPENING_PARENTHESIS === $this->type;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isClosingParenthesis()
+    {
+        return self::TYPE_CLOSING_PARENTHESIS === $this->type;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isComma()
+    {
+        return self::TYPE_COMMA === $this->type;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isSimplePlaceholder()
+    {
+        return self::TYPE_SIMPLE_PLACEHOLDER === $this->type;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isNamedPlaceholder()
+    {
+        return self::TYPE_NAMED_PLACEHOLDER === $this->type;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isAnd()
+    {
+        return self::TYPE_AND === $this->type;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isOr()
+    {
+        return self::TYPE_OR === $this->type;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isNot()
+    {
+        return self::TYPE_NOT === $this->type;
     }
 }

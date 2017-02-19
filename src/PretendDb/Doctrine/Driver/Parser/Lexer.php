@@ -38,8 +38,9 @@ class Lexer
             
             $nextToken = $this->parseNextToken($queryString);
             
+            // No need to store whitespaces in the token sequence.
             if (!$nextToken->isWhitespace()) {
-                $tokens->addToken($nextToken); // No need to store whitespaces in the token sequence.
+                $tokens->addToken($nextToken);
             }
             
             if (strlen($nextToken->getSourceString()) <= 0) {
@@ -99,6 +100,10 @@ class Lexer
         
         if (null !== ($tokenSourceString = $this->checkOneToken($queryString, "AND|&&"))) {
             return Token::initAnd($tokenSourceString);
+        }
+        
+        if (null !== ($tokenSourceString = $this->checkOneToken($queryString, "NOT"))) {
+            return Token::initNot($tokenSourceString);
         }
         
         if (null !== ($tokenSourceString = $this->checkOneToken($queryString, "OR|\\|\\|"))) {

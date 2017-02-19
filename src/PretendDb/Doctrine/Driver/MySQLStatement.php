@@ -9,10 +9,10 @@ namespace PretendDb\Doctrine\Driver;
 
 use Doctrine\DBAL\Driver\Statement;
 use PhpMyAdmin\SqlParser\Components\Condition;
-use PhpMyAdmin\SqlParser\Parser;
 use PhpMyAdmin\SqlParser\Statements\InsertStatement;
 use PhpMyAdmin\SqlParser\Statements\SelectStatement;
 use PretendDb\Doctrine\Driver\Parser\Lexer;
+use PretendDb\Doctrine\Driver\Parser\Parser;
 
 class MySQLStatement implements \IteratorAggregate, Statement
 {
@@ -212,14 +212,17 @@ class MySQLStatement implements \IteratorAggregate, Statement
 
     /**
      * @param Condition $conditionStatement
+     * @return string
      */
     protected function parseCondition($conditionStatement)
     {
         return $conditionStatement->expr;
     }
-    
+
     /**
      * @param SelectStatement $selectStatement
+     * @return bool
+     * @throws \RuntimeException
      */
     protected function prepareSelect($selectStatement)
     {
@@ -235,11 +238,9 @@ class MySQLStatement implements \IteratorAggregate, Statement
         
         $fullCondition = join(" ", $conditionStrings);
         
-        $lexer = new Lexer();
+        $parser = new Parser(new Lexer());
         
-        $queryTokens = $lexer->parse($fullCondition);
-        
-        var_dump("queryTokens", $queryTokens);
+        $parser->parse($fullCondition);
         
         return true;
     }
@@ -276,9 +277,10 @@ class MySQLStatement implements \IteratorAggregate, Statement
         
         $storageTable->insertRow($reindexedValues);
     }
-    
+
     /**
      * @param InsertStatement $insertStatement
+     * @return bool
      */
     protected function prepareInsert($insertStatement)
     {
@@ -315,19 +317,19 @@ class MySQLStatement implements \IteratorAggregate, Statement
     {
         echo "execute with query \"".$this->queryString."\" with params:\n".var_export($this->boundParams, true)."\n";
         
-        $parser = new Parser($this->queryString);
+        $parser = new \PhpMyAdmin\SqlParser\Parser($this->queryString);
         
         $parsedStatement = $parser->statements[0];
         
-        switch (true) {
-            case $parsedStatement instanceof SelectStatement:
-                return $this->prepareSelect($parsedStatement);
-            case $parsedStatement instanceof InsertStatement:
-                return $this->prepareInsert($parsedStatement);
-
-            default:
-                return true;
+        if ($parsedStatement instanceof SelectStatement) {
+            return $this->prepareSelect($parsedStatement);
         }
+        
+        if ($parsedStatement instanceof InsertStatement) {
+            return $this->prepareInsert($parsedStatement);
+        }
+        
+        return true;
     }
 
     /**

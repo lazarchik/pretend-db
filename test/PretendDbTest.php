@@ -81,8 +81,6 @@ class PretendDbTest extends AbstractMySQLDriverTest
         
         $objEntityMgr->clear();
         
-        var_dump($this->driver->getStorage()->getTable("users"));
-        
         $userEntity = $objEntityMgr->getRepository(User::class)->findBy([
             "id" => $userEntity->id,
             "name" => $userEntity->name,
@@ -108,7 +106,7 @@ class PretendDbTest extends AbstractMySQLDriverTest
         $objEntityMgr->clear();
         
         $preparedStatement = $objEntityMgr->getConnection()
-            ->prepare("Select * from users where id < if(id, 1, 10) or (id2 = ? and name=?)");
+            ->prepare("Select * from users where 2 = 2 && id < if(id, 1, 10) or NOT id2 = ? and not name=? or NOT 1 = NOT 2 = NOT 3");
         
         //$preparedStatement->bindValue(1, 1);
         $preparedStatement->bindValue(1, 2);
