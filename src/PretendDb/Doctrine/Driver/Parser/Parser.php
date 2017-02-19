@@ -32,30 +32,18 @@ class Parser
 
     /**
      * @param string $queryString
+     * @return ExpressionInterface
      * @throws \RuntimeException
      */
     public function parse($queryString)
     {
         $queryTokens = $this->lexer->parse($queryString);
         
-        $parsedExpression = $this->parseArbitraryExpression($queryTokens);
-        
-        echo "parsedExpression:\n";
-        echo $parsedExpression->dump()."\n";
+        return $this->parseOrExpressions($queryTokens);
     }
 
     /**
-     * @param TokenSequence $tokens
-     * @return ExpressionInterface
-     * @throws \RuntimeException
-     */
-    protected function parseArbitraryExpression($tokens)
-    {
-        return $this->parseOrExpressions($tokens);
-    }
-
-    /**
-     * Parse an expression that can have operators of any precedence up to OR
+     * Parse an expression that can have operators of any precedence up to OR (which is pretty much all operators)
      * @param TokenSequence $tokens
      * @return ExpressionInterface
      * @throws \RuntimeException
@@ -142,7 +130,13 @@ class Parser
         
         $rightOperand = $this->parseNotExpressions($tokens);
         
-        return new ComparisonExpression($operatorTypeToken->getSourceString(), $leftOperand, $rightOperand);
+        $operatorTypeString = $operatorTypeToken->getSourceString();
+        
+        if ($operatorTypeToken->isNotEqual()) {
+            $operatorTypeString = "!="; // Another way to spell this token is <> but for simplicity we override it.
+        }
+        
+        return new ComparisonExpression($operatorTypeString, $leftOperand, $rightOperand);
     }
 
     /**
@@ -160,15 +154,11 @@ class Parser
                 return $this->parseFunctionCallExpression($tokens);
             }
             
-            $tableFieldExpression = $this->parseTableField($tokens);
-            
-            return $tableFieldExpression;
+            return $this->parseTableField($tokens);
         }
         
         if ($currentToken->isNumberLiteral()) {
-            $numberLiteralExpression = $this->parseNumberLiteral($tokens);
-            
-            return $numberLiteralExpression;
+            return $this->parseNumberLiteral($tokens);
         }
         
         if ($currentToken->isSimplePlaceholder()) {
@@ -182,7 +172,7 @@ class Parser
             
             $tokens->advanceCursor(); // Skip the opening parenthesis token
             
-            $expressionInParentheses = $this->parseArbitraryExpression($tokens);
+            $expressionInParentheses = $this->parseOrExpressions($tokens);
             
             $closingParenthesis = $tokens->getCurrentTokenAndAdvanceCursor();
             
@@ -228,13 +218,13 @@ class Parser
         
         $functionArguments = [];
         
-        $functionArguments[] = $this->parseArbitraryExpression($tokens);
+        $functionArguments[] = $this->parseOrExpressions($tokens);
         
         while ($tokens->getCurrentToken()->isComma()) {
             
             $tokens->advanceCursor(); // Skip the comma.
             
-            $functionArguments[] = $this->parseArbitraryExpression($tokens);
+            $functionArguments[] = $this->parseOrExpressions($tokens);
         }
         
         $closingParenthesisToken = $tokens->getCurrentTokenAndAdvanceCursor();
@@ -297,8 +287,8 @@ class Parser
         if (!$tokens->getCurrentToken()->isPeriod()) {
             // No database name is present
             return new TableFieldExpression(
-                $identifierToken1->getSourceString(),
                 $identifierToken2->getSourceString(),
+                $identifierToken1->getSourceString(),
                 null
             );
         }
@@ -313,9 +303,9 @@ class Parser
         }
         
         return new TableFieldExpression(
-            $identifierToken1->getSourceString(),
+            $identifierToken3->getSourceString(),
             $identifierToken2->getSourceString(),
-            $identifierToken3->getSourceString()
+            $identifierToken1->getSourceString()
         );
     }
 }

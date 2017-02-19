@@ -7,23 +7,29 @@
 namespace PretendDb\Doctrine\Driver;
 
 use Doctrine\DBAL\Driver\Connection;
+use PretendDb\Doctrine\Driver\Parser\Parser;
 
 class MySQLConnection implements Connection
 {
     /** @var MySQLStorage */
     protected $storage;
+    
+    /** @var Parser */
+    protected $parser;
 
     /**
      * @param MySQLStorage $storage
+     * @param Parser $parser
      */
-    public function __construct($storage)
+    public function __construct($storage, $parser)
     {
         $this->storage = $storage;
+        $this->parser = $parser;
     }
     
     public function prepare($prepareString)
     {
-        return new MySQLStatement($this->storage, $prepareString);
+        return new MySQLStatement($this->storage, $prepareString, $this->parser);
     }
     
     public function query()

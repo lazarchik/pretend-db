@@ -11,7 +11,6 @@ use Doctrine\DBAL\Driver\Statement;
 use PhpMyAdmin\SqlParser\Components\Condition;
 use PhpMyAdmin\SqlParser\Statements\InsertStatement;
 use PhpMyAdmin\SqlParser\Statements\SelectStatement;
-use PretendDb\Doctrine\Driver\Parser\Lexer;
 use PretendDb\Doctrine\Driver\Parser\Parser;
 
 class MySQLStatement implements \IteratorAggregate, Statement
@@ -25,14 +24,19 @@ class MySQLStatement implements \IteratorAggregate, Statement
     /** @var array */
     protected $boundParams = [];
     
+    /** @var Parser */
+    protected $parser;
+
     /**
-     * @param MySQLStorage $objStorage
-     * @param string $objQueryString
+     * @param MySQLStorage $storage
+     * @param string $queryString
+     * @param Parser $parser
      */
-    public function __construct(MySQLStorage $objStorage, $objQueryString)
+    public function __construct(MySQLStorage $storage, $queryString, $parser)
     {
-        $this->storage = $objStorage;
-        $this->queryString = $objQueryString;
+        $this->storage = $storage;
+        $this->queryString = $queryString;
+        $this->parser = $parser;
     }
 
     /**
@@ -90,7 +94,7 @@ class MySQLStatement implements \IteratorAggregate, Statement
      */
     public function fetch($fetchMode = null)
     {
-        var_dump("\fetching");
+        echo "Fetching...\n";
         // TODO: Implement fetch() method.
         return false;
     }
@@ -144,11 +148,8 @@ class MySQLStatement implements \IteratorAggregate, Statement
      */
     public function bindValue($param, $value, $type = null)
     {
-        echo "bindValue($param, $value, $type)\n";
-        
         $this->boundParams[$param] = $value;
         
-        // TODO: Implement bindValue() method.
         return true;
     }
 
@@ -224,23 +225,32 @@ class MySQLStatement implements \IteratorAggregate, Statement
      * @return bool
      * @throws \RuntimeException
      */
-    protected function prepareSelect($selectStatement)
+    protected function executeSelect($selectStatement)
     {
         $fromStatement = $selectStatement->from[0];
         
-        $table = $fromStatement->table;
+        $tableName = $fromStatement->table;
         $tableAlias = $fromStatement->alias;
         
-        $conditionStrings = [];
-        foreach ($selectStatement->where as $condition) {
-            $conditionStrings[] = $this->parseCondition($condition);
+        $tableNameOrAlias = $tableAlias ?: $tableName;
+        
+        $whereExpressionStrings = [];
+        foreach ($selectStatement->where as $whereExpression) {
+            $whereExpressionStrings[] = $this->parseCondition($whereExpression);
         }
         
-        $fullCondition = join(" ", $conditionStrings);
+        $fullWhereConditionString = join(" ", $whereExpressionStrings);
         
-        $parser = new Parser(new Lexer());
+        $parsedWhereConditionAST = $this->parser->parse($fullWhereConditionString);
         
-        $parser->parse($fullCondition);
+        // Now just go over all rows in the table and evaluate where condition against each row
+        
+        $tableObject = $this->storage->getTable($tableName);
+        
+        $foundRows = $tableObject->findRowsSatisfyingAnExpression($parsedWhereConditionAST, $this->boundParams,
+            $tableNameOrAlias);
+        
+        echo "Found rows: ".var_export($foundRows, true)."\n";
         
         return true;
     }
@@ -282,7 +292,7 @@ class MySQLStatement implements \IteratorAggregate, Statement
      * @param InsertStatement $insertStatement
      * @return bool
      */
-    protected function prepareInsert($insertStatement)
+    protected function executeInsert($insertStatement)
     {
         $intoStatement = $insertStatement->into;
         
@@ -322,11 +332,11 @@ class MySQLStatement implements \IteratorAggregate, Statement
         $parsedStatement = $parser->statements[0];
         
         if ($parsedStatement instanceof SelectStatement) {
-            return $this->prepareSelect($parsedStatement);
+            return $this->executeSelect($parsedStatement);
         }
         
         if ($parsedStatement instanceof InsertStatement) {
-            return $this->prepareInsert($parsedStatement);
+            return $this->executeInsert($parsedStatement);
         }
         
         return true;

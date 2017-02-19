@@ -20,9 +20,9 @@ class NotExpression implements ExpressionInterface
         $this->operand = $operand;
     }
 
-    public function evaluate()
+    public function evaluate($evaluationContext)
     {
-        // TODO: Implement evaluate() method.
+        return !$this->operand->evaluate($evaluationContext);
     }
 
     /**

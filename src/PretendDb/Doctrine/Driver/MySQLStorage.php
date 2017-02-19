@@ -15,6 +15,7 @@ class MySQLStorage
     /**
      * @param string $tableName
      * @return MySQLTable
+     * @throws \RuntimeException
      */
     public function getTable($tableName)
     {

@@ -30,9 +30,9 @@ class TableFieldExpression implements ExpressionInterface
         $this->databaseName = $databaseName;
     }
 
-    public function evaluate()
+    public function evaluate($evaluationContext)
     {
-        // TODO: Implement evaluate() method.
+        return $evaluationContext->getFieldValue($this->fieldName, $this->tableName, $this->databaseName);
     }
 
     /**

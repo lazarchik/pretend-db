@@ -20,9 +20,9 @@ class NumberLiteralExpression implements ExpressionInterface
         $this->value = $value;
     }
 
-    public function evaluate()
+    public function evaluate($evaluationContext)
     {
-        // TODO: Implement evaluate() method.
+        return $this->value;
     }
 
     /**

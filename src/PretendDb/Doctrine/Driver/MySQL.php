@@ -4,6 +4,8 @@ namespace PretendDb\Doctrine\Driver;
 
 
 use Doctrine\DBAL\Driver\AbstractMySQLDriver;
+use PretendDb\Doctrine\Driver\Parser\Lexer;
+use PretendDb\Doctrine\Driver\Parser\Parser;
 
 
 /**
@@ -14,10 +16,14 @@ class MySQL extends AbstractMySQLDriver
 {
     /** @var MySQLStorage */
     protected $storage;
+    
+    /** @var Parser */
+    protected $parser;
 
     public function __construct()
     {
         $this->storage = new MySQLStorage();
+        $this->parser = new Parser(new Lexer());
     }
     
     /**
@@ -30,7 +36,7 @@ class MySQL extends AbstractMySQLDriver
     
     public function connect(array $params, $username = null, $password = null, array $driverOptions = [])
     {
-        return new MySQLConnection($this->storage);
+        return new MySQLConnection($this->storage, $this->parser);
     }
 
     /**

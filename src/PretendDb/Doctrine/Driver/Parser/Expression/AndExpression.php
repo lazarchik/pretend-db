@@ -25,9 +25,9 @@ class AndExpression implements ExpressionInterface
         $this->rightOperand = $rightOperand;
     }
 
-    public function evaluate()
+    public function evaluate($evaluationContext)
     {
-        // TODO: Implement evaluate() method.
+        return $this->leftOperand->evaluate($evaluationContext) && $this->rightOperand->evaluate($evaluationContext);
     }
 
     /**

@@ -30,9 +30,21 @@ class ComparisonExpression implements ExpressionInterface
         $this->rightExpression = $rightExpression;
     }
 
-    public function evaluate()
+    public function evaluate($evaluationContext)
     {
-        // TODO: Implement evaluate() method.
+        $leftExpressionResult = $this->leftExpression->evaluate($evaluationContext);
+        $rightExpressionResult = $this->rightExpression->evaluate($evaluationContext);
+        
+        switch ($this->operatorType) {
+            case "=": return $leftExpressionResult == $rightExpressionResult;
+            case "!=": return $leftExpressionResult != $rightExpressionResult;
+            case ">": return $leftExpressionResult > $rightExpressionResult;
+            case ">=": return $leftExpressionResult >= $rightExpressionResult;
+            case "<": return $leftExpressionResult < $rightExpressionResult;
+            case "<=": return $leftExpressionResult <= $rightExpressionResult;
+            default:
+                throw new \RuntimeException("Invalid comparison operator type: ".$this->operatorType);
+        }
     }
 
     /**

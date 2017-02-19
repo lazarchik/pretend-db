@@ -7,6 +7,9 @@
 namespace PretendDb\Doctrine\Driver;
 
 
+use PretendDb\Doctrine\Driver\Expression\EvaluationContext;
+use PretendDb\Doctrine\Driver\Parser\Expression\ExpressionInterface;
+
 class MySQLTable
 {
     /** @var string */
@@ -66,10 +69,10 @@ class MySQLTable
 
     /**
      * @param array $rowFields
+     * @throws \RuntimeException
      */
     public function insertRow($rowFields)
     {
-        var_dump("\$rowFields", $rowFields);
         $row = $this->getEmptyRow();
         
         foreach ($rowFields as $columnName => $fieldValue) {
@@ -80,5 +83,53 @@ class MySQLTable
         }
         
         $this->rows[] = $row;
+    }
+
+    /**
+     * @param array $rowValues
+     * @return array
+     */
+    protected function populateRowValuesWithFieldNames($rowValues)
+    {
+        $rowFields = [];
+        foreach ($rowValues as $columnIndex => $fieldValue) {
+            
+            $columnName = $this->columns[$columnIndex]->getName();
+            
+            $rowFields[$columnName] = $fieldValue;
+        }
+        
+        return $rowFields;
+    }
+
+    /**
+     * @param ExpressionInterface $expressionAST
+     * @param string $tableNameOrAlias
+     * @param array $boundParamValues
+     * @return array
+     */
+    public function findRowsSatisfyingAnExpression($expressionAST, $boundParamValues, $tableNameOrAlias)
+    {
+        // TODO: properly support multiple databases.
+        $databaseName = "default_database";
+        
+        $foundRows = [];
+        foreach ($this->rows as $rowValues) {
+            
+            $rowValuesWithFieldNames = $this->populateRowValuesWithFieldNames($rowValues);
+            
+            $evaluationContext = new EvaluationContext();
+            $evaluationContext->setTableRow($databaseName, $tableNameOrAlias, $rowValuesWithFieldNames);
+            //$evaluationContext->addTableAlias($tableNameOrAlias, $this->tableName);
+            $evaluationContext->setBoundParamValues($boundParamValues);
+        
+            $evaluationResult = $expressionAST->evaluate($evaluationContext);
+            
+            if ($evaluationResult) {
+                $foundRows[] = $rowValuesWithFieldNames;
+            }
+        }
+        
+        return $foundRows;
     }
 }

@@ -86,12 +86,28 @@ class Lexer
             return Token::initEqual($tokenSourceString);
         }
         
-        if (null !== ($tokenSourceString = $this->checkOneToken($queryString, "\?"))) {
-            return Token::initSimplePlaceholder($tokenSourceString);
+        if (null !== ($tokenSourceString = $this->checkOneToken($queryString, "!=|<>"))) {
+            return Token::initNotEqual($tokenSourceString);
+        }
+        
+        if (null !== ($tokenSourceString = $this->checkOneToken($queryString, ">"))) {
+            return Token::initGreaterThan($tokenSourceString);
+        }
+        
+        if (null !== ($tokenSourceString = $this->checkOneToken($queryString, ">="))) {
+            return Token::initGreaterThanOrEqual($tokenSourceString);
         }
         
         if (null !== ($tokenSourceString = $this->checkOneToken($queryString, "<"))) {
             return Token::initLessThan($tokenSourceString);
+        }
+        
+        if (null !== ($tokenSourceString = $this->checkOneToken($queryString, "<="))) {
+            return Token::initLessThanOrEqual($tokenSourceString);
+        }
+        
+        if (null !== ($tokenSourceString = $this->checkOneToken($queryString, "\?"))) {
+            return Token::initSimplePlaceholder($tokenSourceString);
         }
         
         if (null !== ($tokenSourceString = $this->checkOneToken($queryString, ","))) {

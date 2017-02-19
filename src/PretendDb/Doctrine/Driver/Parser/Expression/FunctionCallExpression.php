@@ -25,9 +25,12 @@ class FunctionCallExpression implements ExpressionInterface
         $this->arguments = $arguments;
     }
     
-    public function evaluate()
+    public function evaluate($evaluationContext)
     {
         // TODO: Implement evaluate() method.
+        //throw new \RuntimeException("Method not implemented");
+        
+        return 1;
     }
 
     /**

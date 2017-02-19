@@ -100,20 +100,37 @@ class PretendDbTest extends AbstractMySQLDriverTest
         $userEntity->id = 1;
         $userEntity->name = "new_user";
         
+        $userEntity2 = new User();
+        $userEntity2->id = 2;
+        $userEntity2->name = "new_user2";
+        
         $objEntityMgr->persist($userEntity);
+        $objEntityMgr->persist($userEntity2);
         $objEntityMgr->flush();
         
         $objEntityMgr->clear();
         
         $preparedStatement = $objEntityMgr->getConnection()
-            ->prepare("Select * from users where 2 = 2 && id < if(id, 1, 10) or NOT id2 = ? and not name=? or NOT 1 = NOT 2 = NOT 3");
+            ->prepare("Select * from users where id = ? and name = ?");
         
-        //$preparedStatement->bindValue(1, 1);
         $preparedStatement->bindValue(1, 2);
         $preparedStatement->bindValue(2, "test");
         
-        $result = $preparedStatement->execute();
+        $preparedStatement->execute();
         
-        var_dump("\result", $result);
+        $preparedStatement = $objEntityMgr->getConnection()
+            ->prepare("Select * from users where id = ? and name = ?");
+        
+        $preparedStatement->bindValue(1, 1);
+        $preparedStatement->bindValue(2, "new_user");
+        
+        $preparedStatement->execute();
+        
+        $preparedStatement = $objEntityMgr->getConnection()
+            ->prepare("Select * from users where id = ?");
+        
+        $preparedStatement->bindValue(1, 2);
+        
+        $preparedStatement->execute();
     }
 }

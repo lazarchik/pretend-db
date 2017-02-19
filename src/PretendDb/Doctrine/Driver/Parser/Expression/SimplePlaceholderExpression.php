@@ -9,9 +9,9 @@ namespace PretendDb\Doctrine\Driver\Parser\Expression;
 
 class SimplePlaceholderExpression implements ExpressionInterface
 {
-    public function evaluate()
+    public function evaluate($evaluationContext)
     {
-        // TODO: Implement evaluate() method.
+        return $evaluationContext->extractOneBoundParam();
     }
 
     /**
