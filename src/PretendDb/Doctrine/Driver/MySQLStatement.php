@@ -12,6 +12,7 @@ use PhpMyAdmin\SqlParser\Components\Condition;
 use PhpMyAdmin\SqlParser\Parser;
 use PhpMyAdmin\SqlParser\Statements\InsertStatement;
 use PhpMyAdmin\SqlParser\Statements\SelectStatement;
+use PretendDb\Doctrine\Driver\Parser\Lexer;
 
 class MySQLStatement implements \IteratorAggregate, Statement
 {
@@ -234,7 +235,11 @@ class MySQLStatement implements \IteratorAggregate, Statement
         
         $fullCondition = join(" ", $conditionStrings);
         
-        var_dump("\$fullCondition", $fullCondition);
+        $lexer = new Lexer();
+        
+        $queryTokens = $lexer->parse($fullCondition);
+        
+        var_dump("queryTokens", $queryTokens);
         
         return true;
     }

@@ -108,7 +108,7 @@ class PretendDbTest extends AbstractMySQLDriverTest
         $objEntityMgr->clear();
         
         $preparedStatement = $objEntityMgr->getConnection()
-            ->prepare("Select * from users where (id < if(id, 1, 10) or (id2 = ? and name=?))");
+            ->prepare("Select * from users where id < if(id, 1, 10) or (id2 = ? and name=?)");
         
         //$preparedStatement->bindValue(1, 1);
         $preparedStatement->bindValue(1, 2);
