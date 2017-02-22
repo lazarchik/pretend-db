@@ -7,20 +7,26 @@
 namespace PretendDb\Doctrine\Driver\Parser;
 
 
-use PretendDb\Doctrine\Driver\Parser\Expression\AndExpression;
-use PretendDb\Doctrine\Driver\Parser\Expression\ComparisonExpression;
 use PretendDb\Doctrine\Driver\Parser\Expression\ExpressionInterface;
 use PretendDb\Doctrine\Driver\Parser\Expression\FunctionCallExpression;
-use PretendDb\Doctrine\Driver\Parser\Expression\NotExpression;
 use PretendDb\Doctrine\Driver\Parser\Expression\NumberLiteralExpression;
-use PretendDb\Doctrine\Driver\Parser\Expression\OrExpression;
 use PretendDb\Doctrine\Driver\Parser\Expression\SimplePlaceholderExpression;
 use PretendDb\Doctrine\Driver\Parser\Expression\TableFieldExpression;
 
+/**
+ * Parser for WHERE and SELECT expressions.
+ * Precedence climbing algorithm described here:
+ * @see http://www.engr.mun.ca/~theo/Misc/exp_parsing.htm#climbing
+ * 
+ * See phpdoc for class Grammar for the list of supported operators and precedence levels.
+ */
 class Parser
 {
     /** @var Lexer */
-    private $lexer;
+    protected $lexer;
+    
+    /** @var Grammar */
+    protected $grammar;
 
     /**
      * @param Lexer $lexer
@@ -28,6 +34,54 @@ class Parser
     public function __construct($lexer)
     {
         $this->lexer = $lexer;
+        $this->grammar = new Grammar();
+    }
+
+    /**
+     * @param TokenSequence $tokens
+     * @param int $minPrecedence
+     * @return ExpressionInterface
+     * @throws \RuntimeException
+     */
+    protected function parseExpression($tokens, $minPrecedence)
+    {
+        $unaryOperator = $this->grammar->findUnaryOperatorFromToken($tokens->getCurrentToken());
+        
+        if ($unaryOperator) {
+            
+            $tokens->advanceCursor(); // Skip the unary operator token.
+            
+            $leftOperand = $unaryOperator->initAST([$this->parseExpression($tokens, $unaryOperator->getPrecedence())]);
+        } else {
+            
+            $leftOperand = $this->parseSimpleExpressions($tokens);
+        }
+        
+        $binaryOperator = $this->grammar->findBinaryOperatorFromToken($tokens->getCurrentToken());
+        
+        while ($binaryOperator && $binaryOperator->getPrecedence() >= $minPrecedence) {
+            
+            $tokens->advanceCursor(); // Skip the binary operator token.
+            
+            $operatorPrecedence = $binaryOperator->getPrecedence();
+            
+            $rightOperandMinPrecedence = $operatorPrecedence + ($binaryOperator->isLeftAssociative() ? 1 : 0);
+            
+            $rightOperand = $this->parseExpression($tokens, $rightOperandMinPrecedence);
+            
+            $leftOperand = $binaryOperator->initAST([$leftOperand, $rightOperand]);
+            
+            $binaryOperator = $this->grammar->findBinaryOperatorFromToken($tokens->getCurrentToken());
+        }
+        
+        if (!$binaryOperator && !$tokens->getCurrentToken()->isInvalidToken()) {
+            throw new \RuntimeException(
+                "Invalid token when parsing an expression. Expected a binary operator or end of expression, got: "
+                .$tokens->getCurrentToken()->dump()
+            );
+        }
+        
+        return $leftOperand;
     }
 
     /**
@@ -39,104 +93,7 @@ class Parser
     {
         $queryTokens = $this->lexer->parse($queryString);
         
-        return $this->parseOrExpressions($queryTokens);
-    }
-
-    /**
-     * Parse an expression that can have operators of any precedence up to OR (which is pretty much all operators)
-     * @param TokenSequence $tokens
-     * @return ExpressionInterface
-     * @throws \RuntimeException
-     */
-    protected function parseOrExpressions($tokens)
-    {
-        $currentExpression = $this->parseAndExpressions($tokens);
-        
-        while ($tokens->getCurrentToken()->isOr()) {
-
-            $tokens->advanceCursor(); // Skip the "or" token.
-
-            $rightOperand = $this->parseAndExpressions($tokens);
-
-            // Combine left and right operand and assign to the left operand, in case we got more ORs on the right
-            $currentExpression = new OrExpression($currentExpression, $rightOperand);
-        }
-        
-        return $currentExpression;
-    }
-
-    /**
-     * Parse an expression that can have operators of any precedence up to AND (so no ORs)
-     * @param TokenSequence $tokens
-     * @return ExpressionInterface
-     * @throws \RuntimeException
-     */
-    protected function parseAndExpressions($tokens)
-    {
-        $leftOperand = $this->parseNotExpressions($tokens);
-        
-        if (!$tokens->getCurrentToken()->isAnd()) {
-            return $leftOperand;
-        }
-        
-        $tokens->advanceCursor(); // Skip the "and" token.
-        
-        $rightOperand = $this->parseNotExpressions($tokens);
-        
-        return new AndExpression($leftOperand, $rightOperand);
-    }
-
-    /**
-     * Parse an expression that can have operators of any precedence up to NOT (so no ORs or ANDs)
-     * @param TokenSequence $tokens
-     * @return ExpressionInterface
-     * @throws \RuntimeException
-     */
-    protected function parseNotExpressions($tokens)
-    {
-        if (!$tokens->getCurrentToken()->isNot()) {
-            return $this->parseComparisonExpressions($tokens);
-        }
-        
-        $tokens->advanceCursor(); // Skip the "not" token.
-        
-        if (!$tokens->getCurrentToken()->isNot()) {
-            // We know that operand doesn't start with NOT, 
-            return new NotExpression($this->parseComparisonExpressions($tokens));
-        }
-        
-        // Another NOT detected. Parse another "NOT expression".
-        return new NotExpression($this->parseNotExpressions($tokens));
-    }
-
-    /**
-     * Parse an expression with operators of any precedence up to comparison operators (no ORs, ANDs or NOTs).
-     * Well, NOTs are actually allowed as right operands of comparison operators, but not as left ones.
-     * @param TokenSequence $tokens
-     * @return ExpressionInterface
-     * @throws \RuntimeException
-     */
-    protected function parseComparisonExpressions($tokens)
-    {
-        $leftOperand = $this->parseSimpleExpressions($tokens);
-        
-        $currentToken = $tokens->getCurrentToken();
-            
-        if (!$currentToken->isComparisonOperator()) {
-            return $leftOperand;
-        }
-        
-        $operatorTypeToken = $tokens->getCurrentTokenAndAdvanceCursor();
-        
-        $rightOperand = $this->parseNotExpressions($tokens);
-        
-        $operatorTypeString = $operatorTypeToken->getSourceString();
-        
-        if ($operatorTypeToken->isNotEqual()) {
-            $operatorTypeString = "!="; // Another way to spell this token is <> but for simplicity we override it.
-        }
-        
-        return new ComparisonExpression($operatorTypeString, $leftOperand, $rightOperand);
+        return $this->parseExpression($queryTokens, 0);
     }
 
     /**
@@ -172,7 +129,7 @@ class Parser
             
             $tokens->advanceCursor(); // Skip the opening parenthesis token
             
-            $expressionInParentheses = $this->parseOrExpressions($tokens);
+            $expressionInParentheses = $this->parseExpression($tokens, 0);
             
             $closingParenthesis = $tokens->getCurrentTokenAndAdvanceCursor();
             
@@ -218,13 +175,13 @@ class Parser
         
         $functionArguments = [];
         
-        $functionArguments[] = $this->parseOrExpressions($tokens);
+        $functionArguments[] = $this->parseExpression($tokens, 0);
         
         while ($tokens->getCurrentToken()->isComma()) {
             
             $tokens->advanceCursor(); // Skip the comma.
             
-            $functionArguments[] = $this->parseOrExpressions($tokens);
+            $functionArguments[] = $this->parseExpression($tokens, 0);
         }
         
         $closingParenthesisToken = $tokens->getCurrentTokenAndAdvanceCursor();

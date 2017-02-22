@@ -24,6 +24,9 @@ class PretendDbTest extends AbstractMySQLDriverTest
     /** @var EntityManager */
     protected $entityMgr;
     
+    /** @var User */
+    protected $testUserEntity;
+    
     public function setUp()
     {
         parent::setUp();
@@ -36,6 +39,17 @@ class PretendDbTest extends AbstractMySQLDriverTest
         ]);
         
         $this->entityMgr = $this->getEntityManager();
+
+        $this->assertNull($this->entityMgr->find(User::class, 1), "We haven't created the user yet");
+        
+        $this->testUserEntity = new User();
+        $this->testUserEntity->id = 1;
+        $this->testUserEntity->name = "new_user";
+        
+        $this->entityMgr->persist($this->testUserEntity);
+        $this->entityMgr->flush();
+        
+        $this->entityMgr->clear();
     }
 
     /**
@@ -68,49 +82,20 @@ class PretendDbTest extends AbstractMySQLDriverTest
     
     public function testBlah1()
     {
-        $objEntityMgr = $this->entityMgr;
-
-        $this->assertNull($objEntityMgr->find(User::class, 1), "We haven't created the user yet");
-        
-        $userEntity = new User();
-        $userEntity->id = 1;
-        $userEntity->name = "new_user";
-        
-        $objEntityMgr->persist($userEntity);
-        $objEntityMgr->flush();
-        
-        $objEntityMgr->clear();
-        
-        $userEntity = $objEntityMgr->getRepository(User::class)->findBy([
-            "id" => $userEntity->id,
-            "name" => $userEntity->name,
+        $userEntity = $this->entityMgr->getRepository(User::class)->findOneBy([
+            "id" => 1,
+            "name" => "new_user",
         ]);
         
-        
         $this->assertInstanceOf(User::class, $userEntity, "find() should return an instance of the requested entity");
+        $this->assertEquals($this->testUserEntity->id, $userEntity->id);
+        $this->assertEquals($this->testUserEntity->name, $userEntity->name);
+        
     }
     
     public function testBlah2()
     {
-        $objEntityMgr = $this->entityMgr;
-
-        $this->assertNull($objEntityMgr->find(User::class, 1), "We haven't created the user yet");
-        
-        $userEntity = new User();
-        $userEntity->id = 1;
-        $userEntity->name = "new_user";
-        
-        $userEntity2 = new User();
-        $userEntity2->id = 2;
-        $userEntity2->name = "new_user2";
-        
-        $objEntityMgr->persist($userEntity);
-        $objEntityMgr->persist($userEntity2);
-        $objEntityMgr->flush();
-        
-        $objEntityMgr->clear();
-        
-        $preparedStatement = $objEntityMgr->getConnection()
+        $preparedStatement = $this->entityMgr->getConnection()
             ->prepare("Select * from users where id = ? and name = ?");
         
         $preparedStatement->bindValue(1, 2);
@@ -118,7 +103,7 @@ class PretendDbTest extends AbstractMySQLDriverTest
         
         $preparedStatement->execute();
         
-        $preparedStatement = $objEntityMgr->getConnection()
+        $preparedStatement = $this->entityMgr->getConnection()
             ->prepare("Select * from users where id = ? and name = ?");
         
         $preparedStatement->bindValue(1, 1);
@@ -126,10 +111,18 @@ class PretendDbTest extends AbstractMySQLDriverTest
         
         $preparedStatement->execute();
         
-        $preparedStatement = $objEntityMgr->getConnection()
+        $preparedStatement = $this->entityMgr->getConnection()
             ->prepare("Select * from users where id = ?");
         
         $preparedStatement->bindValue(1, 2);
+        
+        $preparedStatement->execute();
+    }
+    
+    public function testBlah3()
+    {
+        $preparedStatement = $this->entityMgr->getConnection()
+            ->prepare("Select 3 + NOT id * ! 5 > 10 x1, name as x2 from users");
         
         $preparedStatement->execute();
     }

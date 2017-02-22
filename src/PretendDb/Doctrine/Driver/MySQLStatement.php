@@ -11,6 +11,8 @@ use Doctrine\DBAL\Driver\Statement;
 use PhpMyAdmin\SqlParser\Components\Condition;
 use PhpMyAdmin\SqlParser\Statements\InsertStatement;
 use PhpMyAdmin\SqlParser\Statements\SelectStatement;
+use PretendDb\Doctrine\Driver\Expression\EvaluationContext;
+use PretendDb\Doctrine\Driver\Parser\Expression\ExpressionInterface;
 use PretendDb\Doctrine\Driver\Parser\Parser;
 
 class MySQLStatement implements \IteratorAggregate, Statement
@@ -26,6 +28,9 @@ class MySQLStatement implements \IteratorAggregate, Statement
     
     /** @var Parser */
     protected $parser;
+    
+    /** @var array */
+    protected $queryResults;
 
     /**
      * @param MySQLStorage $storage
@@ -88,15 +93,32 @@ class MySQLStatement implements \IteratorAggregate, Statement
      *                                defaulting to PDO::FETCH_BOTH.
      *
      * @return mixed The return value of this method on success depends on the fetch mode. In all cases, FALSE is
+     * @throws \InvalidArgumentException
      *               returned on failure.
      *
      * @see PDO::FETCH_* constants.
      */
     public function fetch($fetchMode = null)
     {
-        echo "Fetching...\n";
-        // TODO: Implement fetch() method.
-        return false;
+        if (null === $fetchMode) {
+            $fetchMode = \PDO::FETCH_BOTH;
+        }
+        
+        $resultRow = array_shift($this->queryResults);
+        
+        if (\PDO::FETCH_ASSOC == $fetchMode) {
+            return $resultRow;
+        }
+        
+        if (\PDO::FETCH_NUM == $fetchMode) {
+            return array_values($resultRow);
+        }
+        
+        if (\PDO::FETCH_BOTH == $fetchMode) {
+            return array_merge($resultRow, array_values($resultRow));
+        }
+        
+        throw new \InvalidArgumentException("Fetch mode not yet supported: ".$fetchMode);
     }
 
     /**
@@ -235,11 +257,22 @@ class MySQLStatement implements \IteratorAggregate, Statement
         $tableNameOrAlias = $tableAlias ?: $tableName;
         
         $whereExpressionStrings = [];
-        foreach ($selectStatement->where as $whereExpression) {
-            $whereExpressionStrings[] = $this->parseCondition($whereExpression);
+        
+        if (is_array($selectStatement->where)) {
+            foreach ($selectStatement->where as $whereExpression) {
+                $whereExpressionStrings[] = $this->parseCondition($whereExpression);
+            }
         }
         
+        // TODO: properly support multiple databases.
+        $databaseName = "default_database";
+        
         $fullWhereConditionString = join(" ", $whereExpressionStrings);
+        
+        if (empty($fullWhereConditionString)) {
+            // In case where clause is missing, just use "1" as the condition. It always evaluates to true.
+            $fullWhereConditionString = "1";
+        }
         
         $parsedWhereConditionAST = $this->parser->parse($fullWhereConditionString);
         
@@ -250,7 +283,45 @@ class MySQLStatement implements \IteratorAggregate, Statement
         $foundRows = $tableObject->findRowsSatisfyingAnExpression($parsedWhereConditionAST, $this->boundParams,
             $tableNameOrAlias);
         
-        echo "Found rows: ".var_export($foundRows, true)."\n";
+        $parsedSelectExpressions = [];
+        foreach ($selectStatement->expr as $index => $selectExpressionInfo) {
+            
+            if ("*" == trim($selectExpressionInfo->expr)) {
+                foreach ($tableObject->getTableNames() as $fieldName) {
+                    $parsedSelectExpressions[] = [
+                        "alias" => $fieldName,
+                        "AST" => $this->parser->parse($databaseName.".".$tableNameOrAlias.".".$fieldName),
+                    ];
+                }
+                
+                continue;
+            }
+            
+            $parsedSelectExpressions[] = [
+                "alias" => $selectExpressionInfo->alias,
+                "AST" => $this->parser->parse($selectExpressionInfo->expr),
+            ];
+        }
+        
+        $queryResults = [];
+        foreach ($foundRows as $rowNumber => $foundRowFields) {
+            
+            $evaluationContext = new EvaluationContext();
+            $evaluationContext->setBoundParamValues($this->boundParams);
+            $evaluationContext->addTableAlias($tableAlias, $tableName);
+            $evaluationContext->setTableRow($databaseName, $tableNameOrAlias, $foundRowFields);
+            
+            foreach ($parsedSelectExpressions as $parsedSelectExpression) {
+                $selectExpressionAlias = $parsedSelectExpression["alias"];
+                
+                /** @var ExpressionInterface $selectExpressionAST */
+                $selectExpressionAST = $parsedSelectExpression["AST"];
+                
+                $queryResults[$rowNumber][$selectExpressionAlias] = $selectExpressionAST->evaluate($evaluationContext);
+            }
+        }
+        
+        $this->queryResults = $queryResults;
         
         return true;
     }
@@ -322,11 +393,10 @@ class MySQLStatement implements \IteratorAggregate, Statement
      *                           bound parameters in the SQL statement being executed.
      *
      * @return boolean TRUE on success or FALSE on failure.
+     * @throws \RuntimeException
      */
     public function execute($params = null)
     {
-        echo "execute with query \"".$this->queryString."\" with params:\n".var_export($this->boundParams, true)."\n";
-        
         $parser = new \PhpMyAdmin\SqlParser\Parser($this->queryString);
         
         $parsedStatement = $parser->statements[0];

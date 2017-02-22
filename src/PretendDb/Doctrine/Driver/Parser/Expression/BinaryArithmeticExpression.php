@@ -7,7 +7,7 @@
 namespace PretendDb\Doctrine\Driver\Parser\Expression;
 
 
-class ComparisonExpression implements ExpressionInterface
+class BinaryArithmeticExpression implements ExpressionInterface
 {
     /** @var string */
     protected $operatorType;
@@ -36,14 +36,12 @@ class ComparisonExpression implements ExpressionInterface
         $rightExpressionResult = $this->rightExpression->evaluate($evaluationContext);
         
         switch ($this->operatorType) {
-            case "=": return $leftExpressionResult == $rightExpressionResult;
-            case "!=": return $leftExpressionResult != $rightExpressionResult;
-            case ">": return $leftExpressionResult > $rightExpressionResult;
-            case ">=": return $leftExpressionResult >= $rightExpressionResult;
-            case "<": return $leftExpressionResult < $rightExpressionResult;
-            case "<=": return $leftExpressionResult <= $rightExpressionResult;
+            case "+": return $leftExpressionResult + $rightExpressionResult;
+            case "-": return $leftExpressionResult - $rightExpressionResult;
+            case "*": return $leftExpressionResult * $rightExpressionResult;
+            case "/": return $leftExpressionResult / $rightExpressionResult;
             default:
-                throw new \RuntimeException("Invalid comparison operator type: ".$this->operatorType);
+                throw new \RuntimeException("Invalid binary arithmetic operator type: ".$this->operatorType);
         }
     }
 

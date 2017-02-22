@@ -24,7 +24,8 @@ class Token
     const TYPE_OR                                       = "OR";
     const TYPE_AND                                      = "AND";
     const TYPE_XOR                                      = "XOR";
-    const TYPE_NOT                                      = "NOT";
+    const TYPE_HIGH_PRECEDENCE_NOT                      = "HIGH_PRECENDENCE_NOT";
+    const TYPE_LOW_PRECEDENCE_NOT                       = "LOW_PRECEDENCE_NOT";
     const TYPE_NUMBER_LITERAL                           = "NUMBER_LITERAL";
     const TYPE_STRING_LITERAL                           = "STRING_LITERAL";
     const TYPE_DATETIME_LITERAL                         = "DATETIME_LITERAL";
@@ -85,9 +86,9 @@ class Token
      * @param string $tokenSourceString
      * @return Token
      */
-    public static function initNot($tokenSourceString)
+    public static function initHighPrecedenceNot($tokenSourceString)
     {
-        return new self(self::TYPE_NOT, $tokenSourceString);
+        return new self(self::TYPE_HIGH_PRECEDENCE_NOT, $tokenSourceString);
     }
 
     /**
@@ -214,6 +215,51 @@ class Token
     public static function initOr($sourceString)
     {
         return new self(self::TYPE_OR, $sourceString);
+    }
+
+    /**
+     * @param string $sourceString
+     * @return Token
+     */
+    public static function initPlus($sourceString)
+    {
+        return new self(self::TYPE_PLUS, $sourceString);
+    }
+
+    /**
+     * @param string $sourceString
+     * @return Token
+     */
+    public static function initMinus($sourceString)
+    {
+        return new self(self::TYPE_MINUS, $sourceString);
+    }
+
+    /**
+     * @param string $sourceString
+     * @return Token
+     */
+    public static function initMultiplication($sourceString)
+    {
+        return new self(self::TYPE_MULTIPLICATION, $sourceString);
+    }
+
+    /**
+     * @param string $sourceString
+     * @return Token
+     */
+    public static function initDivision($sourceString)
+    {
+        return new self(self::TYPE_DIVISION, $sourceString);
+    }
+
+    /**
+     * @param string $sourceString
+     * @return Token
+     */
+    public static function initLowPrecedenceNot($sourceString)
+    {
+        return new self(self::TYPE_LOW_PRECEDENCE_NOT, $sourceString);
     }
 
     /**
@@ -399,8 +445,48 @@ class Token
     /**
      * @return bool
      */
-    public function isNot()
+    public function isHighPrecedenceNot()
     {
-        return self::TYPE_NOT === $this->type;
+        return self::TYPE_HIGH_PRECEDENCE_NOT === $this->type;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isPlus()
+    {
+        return self::TYPE_PLUS === $this->type;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isMinus()
+    {
+        return self::TYPE_MINUS === $this->type;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isMultiplication()
+    {
+        return self::TYPE_MULTIPLICATION === $this->type;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isDivision()
+    {
+        return self::TYPE_DIVISION === $this->type;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isLowPrecedenceNot()
+    {
+        return self::TYPE_LOW_PRECEDENCE_NOT === $this->type;
     }
 }

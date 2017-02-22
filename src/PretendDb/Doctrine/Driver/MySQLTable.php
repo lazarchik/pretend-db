@@ -132,4 +132,12 @@ class MySQLTable
         
         return $foundRows;
     }
+
+    /**
+     * @return string[]
+     */
+    public function getTableNames()
+    {
+        return array_flip($this->columnIndexes);
+    }
 }

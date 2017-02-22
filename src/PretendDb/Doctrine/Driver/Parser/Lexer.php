@@ -14,13 +14,28 @@ class Lexer
      * @param string $tokenRegexString
      * @return string|null
      */
-    protected function checkOneToken($queryString, $tokenRegexString)
+    protected function checkTokenRegex($queryString, $tokenRegexString)
     {
         if (!preg_match("~^(".$tokenRegexString.")~i", $queryString, $tokenSourceStringMatches)) {
             return null;
         }
         
         return $tokenSourceStringMatches[1];
+    }
+    
+    /**
+     * @param string $queryString
+     * @param string $tokenString
+     * @return string|null
+     */
+    protected function checkTokenString($queryString, $tokenString)
+    {
+        if (0 !== stripos($queryString, $tokenString)) {
+            return null;
+        }
+        
+        // The case of the characters may differ from $tokenString.
+        return substr($queryString, 0, strlen($tokenString)); 
     }
 
     /**
@@ -62,76 +77,95 @@ class Lexer
      */
     protected function parseNextToken($queryString)
     {
-        if (null !== ($tokenSourceString = $this->checkOneToken($queryString, "[ \t\r\n]+"))) {
+        if (null !== ($tokenSourceString = $this->checkTokenRegex($queryString, "[ \t\r\n]+"))) {
             return Token::initWhitespace($tokenSourceString);
         }
         
-        if (null !== ($tokenSourceString = $this->checkOneToken($queryString, "\\("))) {
+        if (null !== ($tokenSourceString = $this->checkTokenString($queryString, "("))) {
             return Token::initOpeningParenthesis($tokenSourceString);
         }
         
-        if (null !== ($tokenSourceString = $this->checkOneToken($queryString, "\\)"))) {
+        if (null !== ($tokenSourceString = $this->checkTokenString($queryString, ")"))) {
             return Token::initClosingParenthesis($tokenSourceString);
         }
         
-        if (null !== ($tokenSourceString = $this->checkOneToken($queryString, "[-+]?\.[0-9]+(?:e[+-]?[0-9]+)?"))) {
+        if (null !== ($tokenSourceString = $this->checkTokenRegex($queryString, "[-+]?\.[0-9]+(?:e[+-]?[0-9]+)?"))) {
             return Token::initNumberLiteral($tokenSourceString);
         }
         
-        if (null !== ($tokenSourceString = $this->checkOneToken($queryString, "\."))) {
+        if (null !== ($tokenSourceString = $this->checkTokenString($queryString, "."))) {
             return Token::initPeriod($tokenSourceString);
         }
         
-        if (null !== ($tokenSourceString = $this->checkOneToken($queryString, "="))) {
+        if (null !== ($tokenSourceString = $this->checkTokenString($queryString, "="))) {
             return Token::initEqual($tokenSourceString);
         }
         
-        if (null !== ($tokenSourceString = $this->checkOneToken($queryString, "!=|<>"))) {
+        if (null !== ($tokenSourceString = $this->checkTokenRegex($queryString, "!=|<>"))) {
             return Token::initNotEqual($tokenSourceString);
         }
         
-        if (null !== ($tokenSourceString = $this->checkOneToken($queryString, ">"))) {
+        if (null !== ($tokenSourceString = $this->checkTokenString($queryString, ">"))) {
             return Token::initGreaterThan($tokenSourceString);
         }
         
-        if (null !== ($tokenSourceString = $this->checkOneToken($queryString, ">="))) {
+        if (null !== ($tokenSourceString = $this->checkTokenString($queryString, ">="))) {
             return Token::initGreaterThanOrEqual($tokenSourceString);
         }
         
-        if (null !== ($tokenSourceString = $this->checkOneToken($queryString, "<"))) {
+        if (null !== ($tokenSourceString = $this->checkTokenString($queryString, "<"))) {
             return Token::initLessThan($tokenSourceString);
         }
         
-        if (null !== ($tokenSourceString = $this->checkOneToken($queryString, "<="))) {
+        if (null !== ($tokenSourceString = $this->checkTokenString($queryString, "<="))) {
             return Token::initLessThanOrEqual($tokenSourceString);
         }
+        if (null !== ($tokenSourceString = $this->checkTokenString($queryString, "+"))) {
+            return Token::initPlus($tokenSourceString);
+        }
         
-        if (null !== ($tokenSourceString = $this->checkOneToken($queryString, "\?"))) {
+        if (null !== ($tokenSourceString = $this->checkTokenString($queryString, "-"))) {
+            return Token::initMinus($tokenSourceString);
+        }
+        
+        if (null !== ($tokenSourceString = $this->checkTokenString($queryString, "*"))) {
+            return Token::initMultiplication($tokenSourceString);
+        }
+        
+        if (null !== ($tokenSourceString = $this->checkTokenString($queryString, "/"))) {
+            return Token::initDivision($tokenSourceString);
+        }
+        
+        if (null !== ($tokenSourceString = $this->checkTokenString($queryString, "?"))) {
             return Token::initSimplePlaceholder($tokenSourceString);
         }
         
-        if (null !== ($tokenSourceString = $this->checkOneToken($queryString, ","))) {
+        if (null !== ($tokenSourceString = $this->checkTokenString($queryString, ","))) {
             return Token::initComma($tokenSourceString);
         }
         
-        if (null !== ($tokenSourceString = $this->checkOneToken($queryString, "AND|&&"))) {
+        if (null !== ($tokenSourceString = $this->checkTokenRegex($queryString, "AND|&&"))) {
             return Token::initAnd($tokenSourceString);
         }
         
-        if (null !== ($tokenSourceString = $this->checkOneToken($queryString, "NOT"))) {
-            return Token::initNot($tokenSourceString);
+        if (null !== ($tokenSourceString = $this->checkTokenString($queryString, "NOT"))) {
+            return Token::initLowPrecedenceNot($tokenSourceString);
         }
         
-        if (null !== ($tokenSourceString = $this->checkOneToken($queryString, "OR|\\|\\|"))) {
+        if (null !== ($tokenSourceString = $this->checkTokenString($queryString, "!"))) {
+            return Token::initHighPrecedenceNot($tokenSourceString);
+        }
+        
+        if (null !== ($tokenSourceString = $this->checkTokenRegex($queryString, "OR|\\|\\|"))) {
             return Token::initOr($tokenSourceString);
         }
         
-        if (null !== ($tokenSourceString = $this->checkOneToken($queryString, "[a-z\$_][a-z0-9\$_]+"))) {
+        if (null !== ($tokenSourceString = $this->checkTokenRegex($queryString, "[a-z\$_][a-z0-9\$_]+"))) {
             return Token::initIdentifier($tokenSourceString);
         }
         
         if (null !== (
-            $tokenSourceString = $this->checkOneToken($queryString, "[-+]?[0-9]+(?:\.[0-9]*)?(?:e[+-]?[0-9]+)?"))
+            $tokenSourceString = $this->checkTokenRegex($queryString, "[-+]?[0-9]+(?:\.[0-9]*)?(?:e[+-]?[0-9]+)?"))
         ) {
             return Token::initNumberLiteral($tokenSourceString);
         }
