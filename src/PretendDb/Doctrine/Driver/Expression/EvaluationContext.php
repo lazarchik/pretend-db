@@ -55,6 +55,16 @@ class EvaluationContext
     }
 
     /**
+     * @param string[] $tableAliases
+     */
+    public function addTableAliases($tableAliases)
+    {
+        foreach ($tableAliases as $tableAlias => $tableName) {
+            $this->addTableAlias($tableAlias, $tableName);
+        }
+    }
+
+    /**
      * @return mixed
      */
     public function extractOneBoundParam()

@@ -74,13 +74,6 @@ class Parser
             $binaryOperator = $this->grammar->findBinaryOperatorFromToken($tokens->getCurrentToken());
         }
         
-        if (!$binaryOperator && !$tokens->getCurrentToken()->isInvalidToken()) {
-            throw new \RuntimeException(
-                "Invalid token when parsing an expression. Expected a binary operator or end of expression, got: "
-                .$tokens->getCurrentToken()->dump()
-            );
-        }
-        
         return $leftOperand;
     }
 
@@ -93,7 +86,15 @@ class Parser
     {
         $queryTokens = $this->lexer->parse($queryString);
         
-        return $this->parseExpression($queryTokens, 0);
+        $parsedExpression = $this->parseExpression($queryTokens, 0);
+        
+        if (!$queryTokens->getCurrentToken()->isInvalidToken()) {
+            throw new \RuntimeException(
+                "Invalid token after the end of the expression: ".$queryTokens->getCurrentToken()->dump()
+            );
+        }
+        
+        return $parsedExpression;
     }
 
     /**

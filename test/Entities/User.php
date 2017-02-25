@@ -17,10 +17,10 @@ class User
     /**
      * @var int
      * 
-     * @ORM\Column(name="id", type="integer", nullable=false)
+     * @ORM\Column(name="userID", type="integer", nullable=false)
      * @ORM\Id
      */
-    public $id;
+    public $userID;
 
     /**
      * @var string

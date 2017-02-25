@@ -86,6 +86,39 @@ class MySQLTable
     }
 
     /**
+     * @param ExpressionInterface $expressionAST
+     * @param EvaluationContext $evaluationContext
+     * @param param string $tableNameOrAlias
+     * @return array
+     */
+    public function findRowsSatisfyingAnExpression(
+        $expressionAST,
+        $evaluationContext,
+        $tableNameOrAlias
+    )
+    {
+        // TODO: properly support multiple databases.
+        $databaseName = "default_database";
+
+        $foundRows = [];
+        foreach ($this->rows as $rowValues) {
+
+            $rowValuesWithFieldNames = $this->populateRowValuesWithFieldNames($rowValues);
+
+            $newEvaluationContext = clone $evaluationContext;
+            $newEvaluationContext->setTableRow($databaseName, $tableNameOrAlias, $rowValuesWithFieldNames);
+
+            $evaluationResult = $expressionAST->evaluate($newEvaluationContext);
+
+            if ($evaluationResult) {
+                $foundRows[] = $rowValuesWithFieldNames;
+            }
+        }
+
+        return $foundRows;
+    }
+
+    /**
      * @param array $rowValues
      * @return array
      */
@@ -103,31 +136,13 @@ class MySQLTable
     }
 
     /**
-     * @param ExpressionInterface $expressionAST
-     * @param string $tableNameOrAlias
-     * @param array $boundParamValues
      * @return array
      */
-    public function findRowsSatisfyingAnExpression($expressionAST, $boundParamValues, $tableNameOrAlias)
+    public function getAllRows()
     {
-        // TODO: properly support multiple databases.
-        $databaseName = "default_database";
-        
         $foundRows = [];
         foreach ($this->rows as $rowValues) {
-            
-            $rowValuesWithFieldNames = $this->populateRowValuesWithFieldNames($rowValues);
-            
-            $evaluationContext = new EvaluationContext();
-            $evaluationContext->setTableRow($databaseName, $tableNameOrAlias, $rowValuesWithFieldNames);
-            //$evaluationContext->addTableAlias($tableNameOrAlias, $this->tableName);
-            $evaluationContext->setBoundParamValues($boundParamValues);
-        
-            $evaluationResult = $expressionAST->evaluate($evaluationContext);
-            
-            if ($evaluationResult) {
-                $foundRows[] = $rowValuesWithFieldNames;
-            }
+            $foundRows[] = $this->populateRowValuesWithFieldNames($rowValues);
         }
         
         return $foundRows;
@@ -136,7 +151,7 @@ class MySQLTable
     /**
      * @return string[]
      */
-    public function getTableNames()
+    public function getFieldNames()
     {
         return array_flip($this->columnIndexes);
     }
