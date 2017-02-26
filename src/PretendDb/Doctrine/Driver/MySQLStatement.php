@@ -8,11 +8,6 @@ namespace PretendDb\Doctrine\Driver;
 
 
 use Doctrine\DBAL\Driver\Statement;
-use PhpMyAdmin\SqlParser\Statements\InsertStatement;
-use PhpMyAdmin\SqlParser\Statements\SelectStatement;
-use PretendDb\Doctrine\Driver\Expression\EvaluationContext;
-use PretendDb\Doctrine\Driver\Parser\Expression\ExpressionInterface;
-use PretendDb\Doctrine\Driver\Parser\Parser;
 
 class MySQLStatement implements \IteratorAggregate, Statement
 {
@@ -25,22 +20,17 @@ class MySQLStatement implements \IteratorAggregate, Statement
     /** @var array */
     protected $boundParams = [];
     
-    /** @var Parser */
-    protected $parser;
-    
     /** @var array */
     protected $queryResults;
 
     /**
      * @param MySQLStorage $storage
      * @param string $queryString
-     * @param Parser $parser
      */
-    public function __construct(MySQLStorage $storage, $queryString, $parser)
+    public function __construct(MySQLStorage $storage, $queryString)
     {
         $this->storage = $storage;
         $this->queryString = $queryString;
-        $this->parser = $parser;
     }
 
     /**
@@ -233,239 +223,6 @@ class MySQLStatement implements \IteratorAggregate, Statement
     }
 
     /**
-     * @param SelectStatement $selectStatement
-     * @return bool
-     * @throws \RuntimeException
-     */
-    protected function executeSelect($selectStatement)
-    {
-        // TODO: properly support multiple databases.
-        $databaseName = "default_database";
-        
-        $fromStatement = $selectStatement->from[0];
-        
-        $tableName = $fromStatement->table;
-        $tableAlias = $fromStatement->alias;
-        $tableObject = $this->storage->getTable($tableName);
-        
-        $tableNameOrAlias = $tableAlias ?: $tableName;
-        
-        $tableAliases = [$tableNameOrAlias => $tableName];
-        
-        if ($selectStatement->join) {
-            
-            $joinedTablesRows = [];
-            foreach ($tableObject->getAllRows() as $tableRowFields) {
-                $joinedTablesRows[] = [$tableNameOrAlias => $tableRowFields];
-            }
-            
-            foreach ($selectStatement->join as $joinInfoObject) {
-                $joinType = $joinInfoObject->type;
-                $joinedTableName = $joinInfoObject->expr->table;
-                $joinedDatabase = $joinInfoObject->expr->database ?: $databaseName;
-                $joinedTableAlias = $joinInfoObject->expr->alias;
-                $joinedTableNameOrAlias = $joinedTableAlias ?: $joinedTableName;
-                $joinedTableObject = $this->storage->getTable($joinedTableName);
-                $joinedTableFieldNames = $joinedTableObject->getFieldNames();
-                
-                $joinOnExpressionAST = $this->parser->parse($joinInfoObject->on[0]->expr);
-                
-                $newJoinedTablesRows = [];
-                
-                foreach ($joinedTablesRows as $joinedTablesRow) {
-                    
-                    $evaluationContext = new EvaluationContext();
-                    $evaluationContext->addTableAliases($tableAliases);
-                    $evaluationContext->setBoundParamValues($this->boundParams);
-                    
-                    foreach ($joinedTablesRow as $foundTableNameOrAlias => $joinedTablesRowFields) {
-                        $evaluationContext->setTableRow($databaseName, $foundTableNameOrAlias, $joinedTablesRowFields);
-                    }
-                    
-                    $tableAliases[$joinedTableNameOrAlias] = $joinedTableName;
-                    
-                    $joinedTableRows = $joinedTableObject->findRowsSatisfyingAnExpression(
-                        $joinOnExpressionAST, $evaluationContext, $joinedTableNameOrAlias
-                    );
-                    
-                    if ($joinedTableRows) {
-                        foreach ($joinedTableRows as $joinedTableRowFields) {
-                            
-                            $newJoinedTablesRows[] = array_merge(
-                                $joinedTablesRow, [$joinedTableNameOrAlias => $joinedTableRowFields]);
-                        }
-                    } elseif ("LEFT" == $joinType) {
-                        
-                        $joinedTableRowFields = array_combine($joinedTableFieldNames,
-                            array_fill(0, count($joinedTableFieldNames), null));
-                        
-                        $newJoinedTablesRows[] = array_merge(
-                                $joinedTablesRow, [$joinedTableNameOrAlias => $joinedTableRowFields]);
-                    }
-                }
-                
-                $joinedTablesRows = $newJoinedTablesRows;
-            }
-        }
-        
-        $whereExpressionStrings = [];
-        
-        if (is_array($selectStatement->where)) {
-            foreach ($selectStatement->where as $whereExpression) {
-                $whereExpressionStrings[] = $whereExpression->expr;
-            }
-        }
-        
-        $fullWhereConditionString = join(" ", $whereExpressionStrings);
-        
-        if (empty($fullWhereConditionString)) {
-            // In case where clause is missing, just use "1" as the condition. It always evaluates to true.
-            $fullWhereConditionString = "1";
-        }
-        
-        $parsedWhereConditionAST = $this->parser->parse($fullWhereConditionString);
-        
-        // Now just go over all rows in the table and evaluate where condition against each row
-        
-        $evaluationContext = new EvaluationContext();
-        $evaluationContext->setBoundParamValues($this->boundParams);
-        $evaluationContext->addTableAliases($tableAliases);
-        
-        if ($selectStatement->join) {
-            $foundRows = [];
-            foreach ($joinedTablesRows as $joinedTablesRow) {
-                    
-                $newEvaluationContext = clone $evaluationContext;
-                
-                foreach ($joinedTablesRow as $joinedTableNameOrAlias => $joinedTableRowFields) {
-
-                    $newEvaluationContext->setTableRow($databaseName, $joinedTableNameOrAlias, $joinedTableRowFields);
-                }
-    
-                $evaluationResult = $parsedWhereConditionAST->evaluate($newEvaluationContext);
-    
-                if ($evaluationResult) {
-                    $foundRows[] = $joinedTablesRow;
-                }
-            }
-        } else {
-            
-            $plainFoundRows = $tableObject->findRowsSatisfyingAnExpression($parsedWhereConditionAST,
-                $evaluationContext, $tableNameOrAlias);
-            
-            $foundRows = [];
-            foreach ($plainFoundRows as $tableRowFields) {
-                $foundRows[] = [$tableNameOrAlias => $tableRowFields];
-            }
-            
-            $foundRows = [
-                $tableNameOrAlias => $tableObject->findRowsSatisfyingAnExpression(
-                    $parsedWhereConditionAST, $evaluationContext, $tableNameOrAlias
-                ),
-            ];
-        }
-        
-        $parsedSelectExpressions = [];
-        foreach ($selectStatement->expr as $index => $selectExpressionInfo) {
-            
-            if ("*" == trim($selectExpressionInfo->expr)) {
-                foreach ($tableObject->getFieldNames() as $fieldName) {
-                    $parsedSelectExpressions[] = [
-                        "alias" => $fieldName,
-                        "AST" => $this->parser->parse($databaseName.".".$tableNameOrAlias.".".$fieldName),
-                    ];
-                }
-                
-                continue;
-            }
-            
-            $parsedSelectExpressions[] = [
-                "alias" => $selectExpressionInfo->alias,
-                "AST" => $this->parser->parse($selectExpressionInfo->expr),
-            ];
-        }
-        
-        $queryResults = [];
-        foreach ($foundRows as $rowNumber => $foundRowTables) {
-            
-            $evaluationContext = new EvaluationContext();
-            $evaluationContext->setBoundParamValues($this->boundParams);
-            $evaluationContext->addTableAliases($tableAliases);
-            
-            foreach ($foundRowTables as $joinTableAliasOrName => $joinTableRowFields) {
-                
-                $evaluationContext->setTableRow($databaseName, $joinTableAliasOrName, $joinTableRowFields);
-            }
-            
-            foreach ($parsedSelectExpressions as $parsedSelectExpression) {
-                $selectExpressionAlias = $parsedSelectExpression["alias"];
-                
-                /** @var ExpressionInterface $selectExpressionAST */
-                $selectExpressionAST = $parsedSelectExpression["AST"];
-                
-                $queryResults[$rowNumber][$selectExpressionAlias] = $selectExpressionAST->evaluate($evaluationContext);
-            }
-        }
-        
-        $this->queryResults = $queryResults;
-        
-        return true;
-    }
-
-    /**
-     * @param string $value
-     * @return mixed
-     */
-    protected function evaluateValue($value)
-    {
-        if ("?" == $value) {
-            return array_shift($this->boundParams);
-        }
-        
-        return $value;
-    }
-
-    /**
-     * @param string $tableName
-     * @param string[] $columns
-     * @param array $valueFields
-     */
-    protected function insertRow($tableName, $columns, $valueFields)
-    {
-        $reindexedValues = [];
-        
-        foreach ($columns as $columnIndex => $columnName) {
-            $value = $valueFields[$columnIndex];
-            
-            $reindexedValues[$columnName] = $this->evaluateValue($value);
-        }
-        
-        $storageTable = $this->storage->getTable($tableName);
-        
-        $storageTable->insertRow($reindexedValues);
-    }
-
-    /**
-     * @param InsertStatement $insertStatement
-     * @return bool
-     */
-    protected function executeInsert($insertStatement)
-    {
-        $intoStatement = $insertStatement->into;
-        
-        $tableName = $intoStatement->dest->table;
-        $columns = $intoStatement->columns;
-        
-        $values = $insertStatement->values;
-        
-        foreach ($values as $valueFields) {
-            $this->insertRow($tableName, $columns, $valueFields->values);
-        }
-        
-        return true;
-    }
-
-    /**
      * Executes a prepared statement
      *
      * If the prepared statement included parameter markers, you must either:
@@ -483,17 +240,11 @@ class MySQLStatement implements \IteratorAggregate, Statement
      */
     public function execute($params = null)
     {
-        $parser = new \PhpMyAdmin\SqlParser\Parser($this->queryString);
-        
-        $parsedStatement = $parser->statements[0];
-        
-        if ($parsedStatement instanceof SelectStatement) {
-            return $this->executeSelect($parsedStatement);
+        if (null !== $params) {
+            $this->boundParams = $params;
         }
         
-        if ($parsedStatement instanceof InsertStatement) {
-            return $this->executeInsert($parsedStatement);
-        }
+        $this->queryResults = $this->storage->executeQuery($this->queryString, $this->boundParams);
         
         return true;
     }

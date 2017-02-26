@@ -12,7 +12,7 @@ use PretendDb\Doctrine\Driver\Parser\Parser;
  * @author: Eugene Lazarchik
  * @date: 7/6/16
  */
-class MySQL extends AbstractMySQLDriver
+class MySQLDriver extends AbstractMySQLDriver
 {
     /** @var MySQLStorage */
     protected $storage;
@@ -22,8 +22,8 @@ class MySQL extends AbstractMySQLDriver
 
     public function __construct()
     {
-        $this->storage = new MySQLStorage();
         $this->parser = new Parser(new Lexer());
+        $this->storage = new MySQLStorage($this->parser);
     }
     
     /**
@@ -36,7 +36,7 @@ class MySQL extends AbstractMySQLDriver
     
     public function connect(array $params, $username = null, $password = null, array $driverOptions = [])
     {
-        return new MySQLConnection($this->storage, $this->parser);
+        return new MySQLConnection($this->storage);
     }
 
     /**

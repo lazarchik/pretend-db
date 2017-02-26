@@ -14,12 +14,12 @@ use Doctrine\ORM\EntityManager;
 use Doctrine\Tests\DBAL\Driver\AbstractMySQLDriverTest;
 use Entities\BlogPost;
 use Entities\User;
-use PretendDb\Doctrine\Driver\MySQL;
 use PretendDb\Doctrine\Driver\MySQLColumnMeta;
+use PretendDb\Doctrine\Driver\MySQLDriver;
 
 class PretendDbTest extends AbstractMySQLDriverTest
 {
-    /** @var MySQL */
+    /** @var MySQLDriver */
     protected $driver;
     
     /** @var EntityManager */
@@ -41,14 +41,14 @@ class PretendDbTest extends AbstractMySQLDriverTest
     {
         parent::setUp();
         
-        $this->driver = new MySQL();
+        $this->driver = new MySQLDriver();
         
-        $this->driver->getStorage()->createTable("users", [
+        $this->driver->getStorage()->getDatabase(null)->createTable("users", [
             new MySQLColumnMeta("userID"),
             new MySQLColumnMeta("name"),
         ]);
         
-        $this->driver->getStorage()->createTable("blog_posts", [
+        $this->driver->getStorage()->getDatabase(null)->createTable("blog_posts", [
             new MySQLColumnMeta("postID"),
             new MySQLColumnMeta("userID"),
             new MySQLColumnMeta("body"),
@@ -133,6 +133,13 @@ class PretendDbTest extends AbstractMySQLDriverTest
     protected function createDriver()
     {
         return $this->driver;
+    }
+    
+    public function testDirectQuery()
+    {
+        $connection = $this->entityMgr->getConnection();
+        
+        $connection->query("set wait_timeout=900");
     }
     
     public function testBlah1()
