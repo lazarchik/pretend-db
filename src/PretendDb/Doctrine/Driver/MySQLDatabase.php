@@ -32,7 +32,7 @@ class MySQLDatabase
      */
     public function createTable($tableName, $columns)
     {
-        $tableObject = new MySQLTable($tableName, $columns);
+        $tableObject = new MySQLTable($columns);
         
         $this->tables[$tableName] = $tableObject;
     }

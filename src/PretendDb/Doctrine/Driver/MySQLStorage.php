@@ -50,6 +50,14 @@ class MySQLStorage
     }
 
     /**
+     * @return string
+     */
+    public function getCurrentDatabaseName()
+    {
+        return $this->currentDatabaseName;
+    }
+
+    /**
      * @param string|null $databaseName
      * @return MySQLDatabase
      * @throws \RuntimeException
@@ -87,7 +95,7 @@ class MySQLStorage
     /**
      * @param string $queryString
      * @param array $boundParams
-     * @return array
+     * @return MySQLQueryResult
      * @throws \InvalidArgumentException
      * @throws \RuntimeException
      */
@@ -113,7 +121,7 @@ class MySQLStorage
         }
         
         if ($parsedStatement instanceof SetStatement) {
-            return []; // ignore for now
+            return new MySQLQueryResult(); // ignore for now
         }
         
         if ($parsedStatement instanceof DropStatement) {
@@ -131,7 +139,7 @@ class MySQLStorage
     /**
      * @param SelectStatement $selectStatement
      * @param array $boundParams
-     * @return array
+     * @return MySQLQueryResult
      * @throws \RuntimeException
      */
     protected function executeSelect($selectStatement, $boundParams)
@@ -157,11 +165,11 @@ class MySQLStorage
             foreach ($selectStatement->join as $joinInfoObject) {
                 $joinType = $joinInfoObject->type;
                 $joinedTableName = $joinInfoObject->expr->table;
-                $joinedDatabase = $joinInfoObject->expr->database ?: $databaseName;
+                $joinedDatabaseName = $joinInfoObject->expr->database ?: $databaseName;
                 $joinedTableAlias = $joinInfoObject->expr->alias;
                 $joinedTableNameOrAlias = $joinedTableAlias ?: $joinedTableName;
-                $joinedTableObject = $this->getDatabase($joinedDatabase)->getTable($joinedTableName);
-                $joinedTableFieldNames = $joinedTableObject->getFieldNames();
+                $joinedTableObject = $this->getDatabase($joinedDatabaseName)->getTable($joinedTableName);
+                $joinedTableFieldNames = $joinedTableObject->getColumnNames();
                 
                 $joinOnExpressionAST = $this->parser->parse($joinInfoObject->on[0]->expr);
                 
@@ -180,7 +188,7 @@ class MySQLStorage
                     $tableAliases[$joinedTableNameOrAlias] = $joinedTableName;
                     
                     $joinedTableRows = $joinedTableObject->findRowsSatisfyingAnExpression(
-                        $joinOnExpressionAST, $evaluationContext, $joinedTableNameOrAlias
+                        $joinOnExpressionAST, $evaluationContext, $joinedDatabaseName, $joinedTableNameOrAlias
                     );
                     
                     if ($joinedTableRows) {
@@ -246,7 +254,7 @@ class MySQLStorage
         } else {
             
             $plainFoundRows = $tableObject->findRowsSatisfyingAnExpression($parsedWhereConditionAST,
-                $evaluationContext, $tableNameOrAlias);
+                $evaluationContext, $databaseName, $tableNameOrAlias);
             
             $foundRows = [];
             foreach ($plainFoundRows as $tableRowFields) {
@@ -255,7 +263,7 @@ class MySQLStorage
             
             $foundRows = [
                 $tableNameOrAlias => $tableObject->findRowsSatisfyingAnExpression(
-                    $parsedWhereConditionAST, $evaluationContext, $tableNameOrAlias
+                    $parsedWhereConditionAST, $evaluationContext, $databaseName, $tableNameOrAlias
                 ),
             ];
         }
@@ -264,7 +272,7 @@ class MySQLStorage
         foreach ($selectStatement->expr as $index => $selectExpressionInfo) {
             
             if ("*" == trim($selectExpressionInfo->expr)) {
-                foreach ($tableObject->getFieldNames() as $fieldName) {
+                foreach ($tableObject->getColumnNames() as $fieldName) {
                     $parsedSelectExpressions[] = [
                         "alias" => $fieldName,
                         "AST" => $this->parser->parse($databaseName.".".$tableNameOrAlias.".".$fieldName),
@@ -279,6 +287,14 @@ class MySQLStorage
                 "AST" => $this->parser->parse($selectExpressionInfo->expr),
             ];
         }
+        
+        
+        $queryResultsTableColumnMetas = [];
+        foreach ($parsedSelectExpressions as $parsedSelectExpression) {
+            $queryResultsTableColumnMetas[] = new MySQLColumnMeta($parsedSelectExpression["alias"]);
+        }
+        
+        $queryResultsTable = new MySQLTable($queryResultsTableColumnMetas);
         
         $queryResults = [];
         foreach ($foundRows as $rowNumber => $foundRowTables) {
@@ -300,9 +316,14 @@ class MySQLStorage
                 
                 $queryResults[$rowNumber][$selectExpressionAlias] = $selectExpressionAST->evaluate($evaluationContext);
             }
+            
+            $queryResultsTable->insertRow($queryResults[$rowNumber]);
         }
         
-        return $queryResults;
+        $queryResultObject = new MySQLQueryResult();
+        $queryResultObject->setQueryResultsTable($queryResultsTable);
+        
+        return $queryResultObject;
     }
 
     /**
@@ -325,6 +346,7 @@ class MySQLStorage
      * @param string[] $columns
      * @param array $valueFields
      * @param array $boundParams
+     * @return int|null Last insert ID if ID's were autogenerated
      * @throws \RuntimeException
      */
     protected function insertRow($databaseName, $tableName, $columns, $valueFields, $boundParams)
@@ -337,15 +359,35 @@ class MySQLStorage
             $reindexedValues[$columnName] = $this->evaluateValue($value, $boundParams);
         }
         
-        $storageTable = $this->getDatabase($databaseName)->getTable($tableName);
+        $databaseObject = $this->getDatabase($databaseName);
         
-        $storageTable->insertRow($reindexedValues);
+        $storageTable = $databaseObject->getTable($tableName);
+        
+        try {
+            $storageTable->insertRow($reindexedValues);
+        } catch (\RuntimeException $e) {
+            throw new \RuntimeException("Can't insert a row into table: "
+                .$this->formatTableName($databaseName, $tableName).". ".$e->getMessage(), 0, $e);
+        }
+        
+        /** @TODO support proper insert IDs */
+        return $valueFields[0];
+    }
+
+    /**
+     * @param string|null $databaseName
+     * @param string $tableName
+     * @return string
+     */
+    protected function formatTableName($databaseName, $tableName)
+    {
+        return ($databaseName ? $databaseName."." : "").$tableName;
     }
 
     /**
      * @param InsertStatement $insertStatement
      * @param array $boundParams
-     * @return array
+     * @return MySQLQueryResult
      * @throws \RuntimeException
      */
     protected function executeInsert($insertStatement, $boundParams)
@@ -358,17 +400,22 @@ class MySQLStorage
         
         $values = $insertStatement->values;
         
+        $queryResultObject = new MySQLQueryResult();
+        $queryResultObject->setAffectedRowsCount(count($values));
+        
         foreach ($values as $valueFields) {
-            $this->insertRow($databaseName, $tableName, $columns, $valueFields->values, $boundParams);
+            $insertID = $this->insertRow($databaseName, $tableName, $columns, $valueFields->values, $boundParams);
+            
+            $queryResultObject->setLastInsertID($insertID);
         }
         
-        return [];
+        return $queryResultObject;
     }
 
     /**
      * @param DropStatement $parsedStatement
      * @param array $boundParams
-     * @return array
+     * @return MySQLQueryResult
      * @throws \InvalidArgumentException
      */
     protected function executeDrop($parsedStatement, $boundParams)
@@ -391,13 +438,13 @@ class MySQLStorage
             unset($this->databases[$infoAboutDatabaseToDrop->table]);
         }
         
-        return [];
+        return new MySQLQueryResult();
     }
 
     /**
      * @param CreateStatement $parsedStatement
      * @param array $boundParams
-     * @return array
+     * @return MySQLQueryResult
      * @throws \InvalidArgumentException
      */
     protected function executeCreate($parsedStatement, $boundParams)
@@ -415,21 +462,21 @@ class MySQLStorage
     /**
      * @param string $databaseName
      * @param array $boundParams
-     * @return array
+     * @return MySQLQueryResult
      * @throws \InvalidArgumentException
      */
     protected function executeUse($databaseName, $boundParams)
     {
         $this->setCurrentDatabaseName($databaseName);
         
-        return [];
+        return new MySQLQueryResult();
     }
 
 
     /**
      * @param CreateStatement $parsedStatement
      * @param array $boundParams
-     * @return array
+     * @return MySQLQueryResult
      * @throws \InvalidArgumentException
      */
     protected function executeCreateDatabase($parsedStatement, $boundParams)
@@ -448,12 +495,14 @@ class MySQLStorage
         }
 
         $this->createDatabase($databaseName);
+        
+        return new MySQLQueryResult();
     }
 
     /**
      * @param CreateStatement $parsedStatement
      * @param array $boundParams
-     * @return array
+     * @return MySQLQueryResult
      * @throws \RuntimeException
      * @throws \InvalidArgumentException
      */
@@ -487,6 +536,6 @@ class MySQLStorage
         
         $databaseObject->createTable($tableName, $columnsMeta);
         
-        return [];
+        return new MySQLQueryResult();
     }
 }

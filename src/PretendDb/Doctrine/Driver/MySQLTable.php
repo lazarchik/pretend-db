@@ -12,9 +12,6 @@ use PretendDb\Doctrine\Driver\Parser\Expression\ExpressionInterface;
 
 class MySQLTable
 {
-    /** @var string */
-    protected $tableName;
-    
     /** @var MySQLColumnMeta[] */
     protected $columns;
     
@@ -25,17 +22,31 @@ class MySQLTable
     protected $rows = [];
 
     /**
-     * @param string $tableName
      * @param MySQLColumnMeta[] $columns
+     * @internal param string $tableName
      */
-    public function __construct($tableName, $columns)
+    public function __construct($columns)
     {
-        $this->tableName = $tableName;
         $this->columns = $columns;
         
+        $this->columnIndexes = [];
         foreach ($columns as $columnIndex => $columnMetaObject) {
             $this->columnIndexes[$columnMetaObject->getName()] = $columnIndex;
         }
+    }
+
+    /**
+     * @param array $rows
+     * @throws \RuntimeException
+     */
+    public function setRows($rows)
+    {
+        if (array_keys($rows) != $this->columnIndexes) {
+            throw new \RuntimeException("Can't set table rows since the number of columns is incorrect. Expected "
+                .count($this->columnIndexes)." columns. Got: ".var_export($rows, true));
+        }
+        
+        $this->rows = $rows;
     }
 
     /**
@@ -46,8 +57,7 @@ class MySQLTable
     public function getColumnIndex($columnName)
     {
         if (!array_key_exists($columnName, $this->columnIndexes)) {
-            throw new \RuntimeException("Can't determine column index for column ".$columnName
-                ." in table ".$this->tableName);
+            throw new \RuntimeException("Can't determine column index for column ".$columnName." in table ");
         }
         
         return $this->columnIndexes[$columnName];
@@ -88,18 +98,17 @@ class MySQLTable
     /**
      * @param ExpressionInterface $expressionAST
      * @param EvaluationContext $evaluationContext
+     * @param $databaseName
      * @param param string $tableNameOrAlias
      * @return array
      */
     public function findRowsSatisfyingAnExpression(
         $expressionAST,
         $evaluationContext,
+        $databaseName,
         $tableNameOrAlias
     )
     {
-        // TODO: properly support multiple databases.
-        $databaseName = "default_database";
-
         $foundRows = [];
         foreach ($this->rows as $rowValues) {
 
@@ -151,7 +160,7 @@ class MySQLTable
     /**
      * @return string[]
      */
-    public function getFieldNames()
+    public function getColumnNames()
     {
         return array_flip($this->columnIndexes);
     }

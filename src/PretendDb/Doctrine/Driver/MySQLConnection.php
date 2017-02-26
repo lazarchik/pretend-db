@@ -12,6 +12,9 @@ class MySQLConnection implements Connection
 {
     /** @var MySQLStorage */
     protected $storage;
+    
+    /** @var int */
+    protected $lastInsertId = 0;
 
     /**
      * @param MySQLStorage $storage
@@ -24,7 +27,7 @@ class MySQLConnection implements Connection
     
     public function prepare($prepareString)
     {
-        return new MySQLStatement($this->storage, $prepareString);
+        return new MySQLStatement($this->storage, $this, $prepareString);
     }
     
     public function query()
@@ -34,7 +37,7 @@ class MySQLConnection implements Connection
         /** @var string $queryString */
         $queryString = $methodArguments[0];
         
-        $statementObject = new MySQLStatement($this->storage, $queryString);
+        $statementObject = new MySQLStatement($this->storage, $this, $queryString);
         
         $statementObject->execute();
         
@@ -50,25 +53,45 @@ class MySQLConnection implements Connection
     {
         throw new \RuntimeException("Not implemented yet");
     }
-    
+
+    /**
+     * @TODO support $name
+     * 
+     * @param string|null $name
+     * @return int
+     */
     public function lastInsertId($name = null)
     {
-        throw new \RuntimeException("Not implemented yet");
+        return $this->lastInsertId;
+    }
+
+    /**
+     * @param int $lastInsertId
+     */
+    public function setLastInsertId($lastInsertId)
+    {
+        $this->lastInsertId = $lastInsertId;
     }
     
     public function beginTransaction()
     {
-        // @FIXME: implement this
+        // @TODO implement this
+        
+        return;
     }
     
     public function commit()
     {
-        // @FIXME: implement this
+        // @TODO implement this
+        
+        return;
     }
     
     public function rollBack()
     {
-        // @FIXME: implement this
+        // @TODO implement this
+        
+        return;
     }
     
     public function errorCode()

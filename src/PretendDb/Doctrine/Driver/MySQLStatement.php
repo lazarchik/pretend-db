@@ -21,16 +21,36 @@ class MySQLStatement implements \IteratorAggregate, Statement
     protected $boundParams = [];
     
     /** @var array */
-    protected $queryResults;
+    protected $queryResultRows;
+    
+    /** @var MySQLTable */
+    protected $queryResultsTable;
+    
+    /** @var int|null */
+    protected $affectedRowsCount;
+    
+    /** @var string SQLSTATE error code (a five characters alphanumeric identifier defined in the ANSI SQL standard). */
+    protected $sqlStateErrorCode;
+    
+    /** @var int */
+    protected $errorCodeNumber;
+    
+    /** @var string */
+    protected $errorMessage;
+    
+    /** @var MySQLConnection */
+    private $connection;
 
     /**
      * @param MySQLStorage $storage
+     * @param MySQLConnection$connection
      * @param string $queryString
      */
-    public function __construct(MySQLStorage $storage, $queryString)
+    public function __construct(MySQLStorage $storage, MySQLConnection $connection, $queryString)
     {
         $this->storage = $storage;
         $this->queryString = $queryString;
+        $this->connection = $connection;
     }
 
     /**
@@ -40,7 +60,12 @@ class MySQLStatement implements \IteratorAggregate, Statement
      */
     public function closeCursor()
     {
-        // TODO: Implement closeCursor() method.
+        if (!$this->queryResultsTable) {
+            return false;
+        }
+        
+        $this->queryResultRows = $this->queryResultsTable->getAllRows();
+        
         return true;
     }
 
@@ -53,8 +78,7 @@ class MySQLStatement implements \IteratorAggregate, Statement
      */
     public function columnCount()
     {
-        // TODO: Implement columnCount() method.
-        throw new \RuntimeException("Not implemented yet");
+        return count($this->queryResultsTable->getColumnNames());
     }
 
     /**
@@ -93,18 +117,29 @@ class MySQLStatement implements \IteratorAggregate, Statement
             $fetchMode = \PDO::FETCH_BOTH;
         }
         
-        $resultRow = array_shift($this->queryResults);
+        $resultRowFields = array_shift($this->queryResultRows);
         
+        return $this->getRowDataBasedOnFetchMode($resultRowFields, $fetchMode);
+    }
+
+    /**
+     * @param array $rowFields
+     * @param int $fetchMode
+     * @return array
+     * @throws \InvalidArgumentException
+     */
+    protected function getRowDataBasedOnFetchMode($rowFields, $fetchMode)
+    {
         if (\PDO::FETCH_ASSOC == $fetchMode) {
-            return $resultRow;
+            return $rowFields;
         }
         
         if (\PDO::FETCH_NUM == $fetchMode) {
-            return array_values($resultRow);
+            return array_values($rowFields);
         }
         
         if (\PDO::FETCH_BOTH == $fetchMode) {
-            return array_merge($resultRow, array_values($resultRow));
+            return array_merge($rowFields, array_values($rowFields));
         }
         
         throw new \InvalidArgumentException("Fetch mode not yet supported: ".$fetchMode);
@@ -118,13 +153,22 @@ class MySQLStatement implements \IteratorAggregate, Statement
      *                                defaulting to PDO::FETCH_BOTH.
      *
      * @return array
+     * @throws \InvalidArgumentException
      *
      * @see PDO::FETCH_* constants.
      */
     public function fetchAll($fetchMode = null)
     {
-        // TODO: Implement fetchAll() method.
-        throw new \RuntimeException("Not implemented yet");
+        if (null === $fetchMode) {
+            $fetchMode = \PDO::FETCH_BOTH;
+        }
+        
+        $fetchedRows = [];
+        foreach ($this->queryResultRows as $resultRowFields) {
+            $fetchedRows[] = $this->getRowDataBasedOnFetchMode($resultRowFields, $fetchMode);
+        }
+        
+        return $fetchedRows;
     }
 
     /**
@@ -135,11 +179,18 @@ class MySQLStatement implements \IteratorAggregate, Statement
      *                             fetches the first column.
      *
      * @return string|boolean A single column in the next row of a result set, or FALSE if there are no more rows.
+     * @throws \RuntimeException
      */
     public function fetchColumn($columnIndex = 0)
     {
-        // TODO: Implement fetchColumn() method.
-        throw new \RuntimeException("Not implemented yet");
+        $resultRowValues = array_values(array_shift($this->queryResultRows));
+        
+        if (!array_key_exists($columnIndex, $resultRowValues)) {
+            throw new \RuntimeException("fetchColumn: column number is not available in query result. Column number: "
+                .$columnIndex.". Query results: ".var_export($this->queryResultRows, true));
+        }
+        
+        return $resultRowValues[$columnIndex];
     }
 
     /**
@@ -192,8 +243,9 @@ class MySQLStatement implements \IteratorAggregate, Statement
      */
     public function bindParam($column, &$variable, $type = null, $length = null)
     {
-        // TODO: Implement bindParam() method.
-        throw new \RuntimeException("Not implemented yet");
+        /** @TODO Handle $type and $length */
+        
+        $this->boundParams[$column] = $variable;
     }
 
     /**
@@ -205,8 +257,7 @@ class MySQLStatement implements \IteratorAggregate, Statement
      */
     public function errorCode()
     {
-        // TODO: Implement errorCode() method.
-        throw new \RuntimeException("Not implemented yet");
+        return $this->sqlStateErrorCode;
     }
 
     /**
@@ -218,8 +269,11 @@ class MySQLStatement implements \IteratorAggregate, Statement
      */
     public function errorInfo()
     {
-        // TODO: Implement errorInfo() method.
-        throw new \RuntimeException("Not implemented yet");
+        return [
+            $this->sqlStateErrorCode,
+            $this->errorCodeNumber,
+            $this->errorMessage,
+        ];
     }
 
     /**
@@ -236,6 +290,7 @@ class MySQLStatement implements \IteratorAggregate, Statement
      *                           bound parameters in the SQL statement being executed.
      *
      * @return boolean TRUE on success or FALSE on failure.
+     * @throws \InvalidArgumentException
      * @throws \RuntimeException
      */
     public function execute($params = null)
@@ -244,7 +299,17 @@ class MySQLStatement implements \IteratorAggregate, Statement
             $this->boundParams = $params;
         }
         
-        $this->queryResults = $this->storage->executeQuery($this->queryString, $this->boundParams);
+        $queryResult = $this->storage->executeQuery($this->queryString, $this->boundParams);;
+        
+        $this->queryResultsTable = $queryResult->getQueryResultsTable();
+        $this->errorCodeNumber = $queryResult->getErrorCode();
+        $this->affectedRowsCount = $queryResult->getAffectedRowsCount();
+        $this->errorMessage = $queryResult->getErrorMessage();
+        $this->sqlStateErrorCode = $queryResult->getSqlStateErrorCode();
+        
+        $this->queryResultRows = $this->queryResultsTable->getAllRows();
+        
+        $this->connection->setLastInsertId($queryResult->getLastInsertID());
         
         return true;
     }
@@ -262,13 +327,15 @@ class MySQLStatement implements \IteratorAggregate, Statement
      */
     public function rowCount()
     {
-        // TODO: Implement rowCount() method.
-        throw new \RuntimeException("Not implemented yet");
+        return $this->affectedRowsCount;
     }
-    
+
+    /**
+     * @return \Iterator
+     * @throws \InvalidArgumentException
+     */
     public function getIterator()
     {
-        // TODO: Implement this
-        return new \ArrayIterator([]);
+        return new \ArrayIterator($this->fetchAll());
     }
 }
