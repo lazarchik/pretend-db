@@ -1,7 +1,6 @@
 {
   "name": "lazarchik/pretend-db",
-  "description": "Drop-in mock replacement for MySQL to be used in Doctrine",
-  "version": "0.0.1",
+  "description": "A Doctrine driver that emulates basic MySQL functionality. Can be used to speed up automated tests.",
   "authors": [
     {
       "name": "Eugene Lazarchik",
@@ -9,7 +8,7 @@
     }
   ],
   "require": {
-    "doctrine/dbal": "v2.5.x-dev",
+    "doctrine/dbal": ">=2.5-dev,<2.7-dev",
     "phpunit/phpunit": "4.8.*",
     "phpmyadmin/sql-parser": "^4.1"
   },
