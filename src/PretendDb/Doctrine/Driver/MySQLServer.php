@@ -16,11 +16,8 @@ use PretendDb\Doctrine\Driver\Expression\EvaluationContext;
 use PretendDb\Doctrine\Driver\Parser\Expression\ExpressionInterface;
 use PretendDb\Doctrine\Driver\Parser\Parser;
 
-class MySQLStorage
+class MySQLServer
 {
-    /** @var string */
-    protected $currentDatabaseName;
-    
     /** @var MySQLDatabase[] */
     protected $databases = [];
     
@@ -36,40 +33,28 @@ class MySQLStorage
     }
 
     /**
-     * @param string $currentDatabaseName
-     * @throws \InvalidArgumentException
+     * @return string[]
      */
-    public function setCurrentDatabaseName($currentDatabaseName)
+    public function getExistingDatabaseNames()
     {
-        if (!$this->databaseExists($currentDatabaseName)) {
-            throw new \InvalidArgumentException("Can't USE a database that doesn't exist: ".$currentDatabaseName
-                .". Existing databases: ".join(", ", array_keys($this->databases)));
-        }
-        
-        $this->currentDatabaseName = $currentDatabaseName;
-    }
-
-    /**
-     * @return string
-     */
-    public function getCurrentDatabaseName()
-    {
-        return $this->currentDatabaseName;
+        return array_keys($this->databases);
     }
 
     /**
      * @param string|null $databaseName
+     * @param MySQLConnection $connection
      * @return MySQLDatabase
      * @throws \RuntimeException
      */
-    public function getDatabase($databaseName)
+    public function getDatabase($databaseName, MySQLConnection $connection)
     {
         if (null === $databaseName) {
-            $databaseName = $this->currentDatabaseName;
+            $databaseName = $connection->getCurrentDatabaseName();
         }
         
         if (!$this->databaseExists($databaseName)) {
-            throw new \RuntimeException("Database doesn't exist: ".$databaseName);
+            throw new \RuntimeException("Database doesn't exist: `".$databaseName
+                ."`. Existing databases: ".var_export($this->databases, true));
         }
         
         return $this->databases[$databaseName];
@@ -95,17 +80,18 @@ class MySQLStorage
     /**
      * @param string $queryString
      * @param array $boundParams
+     * @param MySQLConnection $connection
      * @return MySQLQueryResult
      * @throws \InvalidArgumentException
      * @throws \RuntimeException
      */
-    public function executeQuery($queryString, $boundParams)
+    public function executeQuery($queryString, $boundParams, MySQLConnection $connection)
     {
         // For some reason PHPMyAdmin's parser doesn't support USE statements.
         // Do a rough parsing with regular expressions for now.
         if (preg_match("~^[ \t]*USE `?([a-z\$_][a-z0-9\$_]+)[ \t]*`?$~i", $queryString, $useStatementMatch)) {
             
-            return $this->executeUse($useStatementMatch[1], $boundParams);
+            return $this->executeUse($useStatementMatch[1], $boundParams, $connection);
         }
         
         $parser = new \PhpMyAdmin\SqlParser\Parser($queryString);
@@ -113,11 +99,11 @@ class MySQLStorage
         $parsedStatement = $parser->statements[0];
         
         if ($parsedStatement instanceof SelectStatement) {
-            return $this->executeSelect($parsedStatement, $boundParams);
+            return $this->executeSelect($parsedStatement, $boundParams, $connection);
         }
         
         if ($parsedStatement instanceof InsertStatement) {
-            return $this->executeInsert($parsedStatement, $boundParams);
+            return $this->executeInsert($parsedStatement, $boundParams, $connection);
         }
         
         if ($parsedStatement instanceof SetStatement) {
@@ -125,11 +111,11 @@ class MySQLStorage
         }
         
         if ($parsedStatement instanceof DropStatement) {
-            return $this->executeDrop($parsedStatement, $boundParams);
+            return $this->executeDrop($parsedStatement, $boundParams, $connection);
         }
         
         if ($parsedStatement instanceof CreateStatement) {
-            return $this->executeCreate($parsedStatement, $boundParams);
+            return $this->executeCreate($parsedStatement, $boundParams, $connection);
         }
         
         throw new \RuntimeException("Only SELECT and INSERT statements are currently supported. Got: ".$queryString
@@ -139,17 +125,18 @@ class MySQLStorage
     /**
      * @param SelectStatement $selectStatement
      * @param array $boundParams
+     * @param MySQLConnection $connection
      * @return MySQLQueryResult
      * @throws \RuntimeException
      */
-    protected function executeSelect($selectStatement, $boundParams)
+    protected function executeSelect($selectStatement, $boundParams, MySQLConnection $connection)
     {
         $fromStatement = $selectStatement->from[0];
         
         $databaseName = $fromStatement->database;
         $tableName = $fromStatement->table;
         $tableAlias = $fromStatement->alias;
-        $tableObject = $this->getDatabase($databaseName)->getTable($tableName);
+        $tableObject = $this->getDatabase($databaseName, $connection)->getTable($tableName);
         
         $tableNameOrAlias = $tableAlias ?: $tableName;
         
@@ -168,7 +155,7 @@ class MySQLStorage
                 $joinedDatabaseName = $joinInfoObject->expr->database ?: $databaseName;
                 $joinedTableAlias = $joinInfoObject->expr->alias;
                 $joinedTableNameOrAlias = $joinedTableAlias ?: $joinedTableName;
-                $joinedTableObject = $this->getDatabase($joinedDatabaseName)->getTable($joinedTableName);
+                $joinedTableObject = $this->getDatabase($joinedDatabaseName, $connection)->getTable($joinedTableName);
                 $joinedTableFieldNames = $joinedTableObject->getColumnNames();
                 
                 $joinOnExpressionAST = $this->parser->parse($joinInfoObject->on[0]->expr);
@@ -346,10 +333,12 @@ class MySQLStorage
      * @param string[] $columns
      * @param array $valueFields
      * @param array $boundParams
+     * @param MySQLConnection $connection
      * @return int|null Last insert ID if ID's were autogenerated
      * @throws \RuntimeException
      */
-    protected function insertRow($databaseName, $tableName, $columns, $valueFields, $boundParams)
+    protected function insertRow($databaseName, $tableName, $columns, $valueFields, $boundParams,
+            MySQLConnection $connection)
     {
         $reindexedValues = [];
         
@@ -359,7 +348,7 @@ class MySQLStorage
             $reindexedValues[$columnName] = $this->evaluateValue($value, $boundParams);
         }
         
-        $databaseObject = $this->getDatabase($databaseName);
+        $databaseObject = $this->getDatabase($databaseName, $connection);
         
         $storageTable = $databaseObject->getTable($tableName);
         
@@ -387,10 +376,11 @@ class MySQLStorage
     /**
      * @param InsertStatement $insertStatement
      * @param array $boundParams
+     * @param MySQLConnection $connection
      * @return MySQLQueryResult
      * @throws \RuntimeException
      */
-    protected function executeInsert($insertStatement, $boundParams)
+    protected function executeInsert($insertStatement, $boundParams, MySQLConnection $connection)
     {
         $intoStatement = $insertStatement->into;
         
@@ -404,7 +394,8 @@ class MySQLStorage
         $queryResultObject->setAffectedRowsCount(count($values));
         
         foreach ($values as $valueFields) {
-            $insertID = $this->insertRow($databaseName, $tableName, $columns, $valueFields->values, $boundParams);
+            $insertID = $this->insertRow(
+                $databaseName, $tableName, $columns, $valueFields->values, $boundParams, $connection);
             
             $queryResultObject->setLastInsertID($insertID);
         }
@@ -415,10 +406,11 @@ class MySQLStorage
     /**
      * @param DropStatement $parsedStatement
      * @param array $boundParams
+     * @param MySQLConnection $connection
      * @return MySQLQueryResult
      * @throws \InvalidArgumentException
      */
-    protected function executeDrop($parsedStatement, $boundParams)
+    protected function executeDrop($parsedStatement, $boundParams, MySQLConnection $connection)
     {
         $databaseOptionPresent = in_array("DATABASE", $parsedStatement->options->options);
         $ifExistsOptionPresent = in_array("IF EXISTS", $parsedStatement->options->options);
@@ -444,30 +436,32 @@ class MySQLStorage
     /**
      * @param CreateStatement $parsedStatement
      * @param array $boundParams
+     * @param MySQLConnection $connection
      * @return MySQLQueryResult
      * @throws \InvalidArgumentException
      */
-    protected function executeCreate($parsedStatement, $boundParams)
+    protected function executeCreate($parsedStatement, $boundParams, MySQLConnection $connection)
     {
         $databaseOptionPresent = in_array("DATABASE", $parsedStatement->options->options);
         
         if (!$databaseOptionPresent) {
-            return $this->executeCreateTable($parsedStatement, $boundParams);
+            return $this->executeCreateTable($parsedStatement, $boundParams, $connection);
         }
         
         
-        return $this->executeCreateDatabase($parsedStatement, $boundParams);
+        return $this->executeCreateDatabase($parsedStatement, $boundParams, $connection);
     }
 
     /**
      * @param string $databaseName
      * @param array $boundParams
+     * @param MySQLConnection $connection
      * @return MySQLQueryResult
      * @throws \InvalidArgumentException
      */
-    protected function executeUse($databaseName, $boundParams)
+    protected function executeUse($databaseName, $boundParams, MySQLConnection $connection)
     {
-        $this->setCurrentDatabaseName($databaseName);
+        $connection->setCurrentDatabaseName($databaseName);
         
         return new MySQLQueryResult();
     }
@@ -476,10 +470,11 @@ class MySQLStorage
     /**
      * @param CreateStatement $parsedStatement
      * @param array $boundParams
+     * @param MySQLConnection $connection
      * @return MySQLQueryResult
      * @throws \InvalidArgumentException
      */
-    protected function executeCreateDatabase($parsedStatement, $boundParams)
+    protected function executeCreateDatabase($parsedStatement, $boundParams, MySQLConnection $connection)
     {
         $ifNotExistsOptionPresent = in_array("IF NOT EXISTS", $parsedStatement->options->options);
         
@@ -502,11 +497,10 @@ class MySQLStorage
     /**
      * @param CreateStatement $parsedStatement
      * @param array $boundParams
+     * @param MySQLConnection $connection
      * @return MySQLQueryResult
-     * @throws \RuntimeException
-     * @throws \InvalidArgumentException
      */
-    protected function executeCreateTable($parsedStatement, $boundParams)
+    protected function executeCreateTable($parsedStatement, $boundParams, MySQLConnection $connection)
     {
         $ifNotExistsOptionPresent = in_array("IF NOT EXISTS", $parsedStatement->options->options);
         
@@ -520,9 +514,9 @@ class MySQLStorage
             throw new \InvalidArgumentException("Table name in CREATE TABLE must not be empty. Got: ".$tableName);
         }
         
-        $databaseObject = $this->getDatabase($databaseName);
+        $databaseObject = $this->getDatabase($databaseName, $connection);
         
-        if (!$ifNotExistsOptionPresent && !$databaseObject->tableExists($tableName)) {
+        if (!$ifNotExistsOptionPresent && $databaseObject->tableExists($tableName)) {
             throw new \InvalidArgumentException("Can't create table that already exists: ".$tableName);
         }
         

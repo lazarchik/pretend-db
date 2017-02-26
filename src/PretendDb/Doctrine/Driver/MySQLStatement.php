@@ -11,8 +11,8 @@ use Doctrine\DBAL\Driver\Statement;
 
 class MySQLStatement implements \IteratorAggregate, Statement
 {
-    /** @var MySQLStorage */
-    protected $storage;
+    /** @var MySQLServer */
+    protected $server;
     
     /** @var string */
     protected $queryString;
@@ -42,13 +42,13 @@ class MySQLStatement implements \IteratorAggregate, Statement
     private $connection;
 
     /**
-     * @param MySQLStorage $storage
+     * @param MySQLServer $server
      * @param MySQLConnection$connection
      * @param string $queryString
      */
-    public function __construct(MySQLStorage $storage, MySQLConnection $connection, $queryString)
+    public function __construct(MySQLServer $server, MySQLConnection $connection, $queryString)
     {
-        $this->storage = $storage;
+        $this->server = $server;
         $this->queryString = $queryString;
         $this->connection = $connection;
     }
@@ -299,7 +299,7 @@ class MySQLStatement implements \IteratorAggregate, Statement
             $this->boundParams = $params;
         }
         
-        $queryResult = $this->storage->executeQuery($this->queryString, $this->boundParams);;
+        $queryResult = $this->server->executeQuery($this->queryString, $this->boundParams, $this->connection);
         
         $this->queryResultsTable = $queryResult->getQueryResultsTable();
         $this->errorCodeNumber = $queryResult->getErrorCode();

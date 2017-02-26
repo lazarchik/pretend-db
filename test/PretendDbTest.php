@@ -14,7 +14,6 @@ use Doctrine\ORM\EntityManager;
 use Doctrine\Tests\DBAL\Driver\AbstractMySQLDriverTest;
 use Entities\BlogPost;
 use Entities\User;
-use PretendDb\Doctrine\Driver\MySQLColumnMeta;
 use PretendDb\Doctrine\Driver\MySQLDriver;
 
 class PretendDbTest extends AbstractMySQLDriverTest
@@ -41,21 +40,17 @@ class PretendDbTest extends AbstractMySQLDriverTest
     {
         parent::setUp();
         
+        MySQLDriver::clearServersList();
+        
         $this->driver = new MySQLDriver();
         
-        $this->driver->getStorage()->getDatabase(null)->createTable("users", [
-            new MySQLColumnMeta("userID"),
-            new MySQLColumnMeta("name"),
-        ]);
-        
-        $this->driver->getStorage()->getDatabase(null)->createTable("blog_posts", [
-            new MySQLColumnMeta("postID"),
-            new MySQLColumnMeta("userID"),
-            new MySQLColumnMeta("body"),
-            new MySQLColumnMeta("createdAt"),
-        ]);
-        
         $this->entityMgr = $this->createEntityManager();
+        
+        $this->entityMgr->getConnection()->query("CREATE DATABASE mydatabase");
+        $this->entityMgr->getConnection()->query("USE mydatabase");
+        $this->entityMgr->getConnection()->query("CREATE TABLE users (userID INT(10), name VARCHAR(127))");
+        $this->entityMgr->getConnection()->query("CREATE TABLE blog_posts (postID INT(10), userID INT(10),
+            body VARCHAR(255), createdAt TIMESTAMP)");
         
         $this->testUserEntity = new User();
         $this->testUserEntity->userID = 1;
@@ -123,7 +118,7 @@ class PretendDbTest extends AbstractMySQLDriverTest
         $config->setProxyDir("/tmp/doctrine/proxies");
         $config->setProxyNamespace("DoctrineProxies");
         
-        $connection = new Connection([], $this->driver, $config, null);
+        $connection = new Connection(["host" => "mytestdb"], $this->driver, $config, null);
         
         $entityManager = EntityManager::create($connection, $config);
         
