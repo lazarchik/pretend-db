@@ -32,9 +32,9 @@ class MySQLConnection implements Connection
         return new MySQLStatement($this->storage, $prepareString, $this->parser);
     }
     
-    public function query()
+    public function query($queryString)
     {
-        throw new \RuntimeException("Not implemented yet");
+        return new MySQLStatement($this->storage, $queryString, $this->parser);
     }
     
     public function quote($input, $type=\PDO::PARAM_STR)
