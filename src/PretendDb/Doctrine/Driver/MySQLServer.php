@@ -14,6 +14,7 @@ use PhpMyAdmin\SqlParser\Statements\SelectStatement;
 use PhpMyAdmin\SqlParser\Statements\SetStatement;
 use PretendDb\Doctrine\Driver\Expression\EvaluationContext;
 use PretendDb\Doctrine\Driver\Parser\Expression\ExpressionInterface;
+use PretendDb\Doctrine\Driver\Parser\Expression\TableFieldExpression;
 use PretendDb\Doctrine\Driver\Parser\Parser;
 
 class MySQLServer
@@ -87,39 +88,44 @@ class MySQLServer
      */
     public function executeQuery($queryString, $boundParams, MySQLConnection $connection)
     {
-        // For some reason PHPMyAdmin's parser doesn't support USE statements.
-        // Do a rough parsing with regular expressions for now.
-        if (preg_match("~^[ \t]*USE `?([a-z\$_][a-z0-9\$_]+)[ \t]*`?$~i", $queryString, $useStatementMatch)) {
+        try {
+            // For some reason PHPMyAdmin's parser doesn't support USE statements.
+            // Do a rough parsing with regular expressions for now.
+            if (preg_match("~^[ \t]*USE `?([a-z\$_][a-z0-9\$_]+)[ \t]*`?$~i", $queryString, $useStatementMatch)) {
+
+                return $this->executeUse($useStatementMatch[1], $boundParams, $connection);
+            }
+
+            $parser = new \PhpMyAdmin\SqlParser\Parser($queryString);
+
+            $parsedStatement = $parser->statements[0];
+
+            if ($parsedStatement instanceof SelectStatement) {
+                return $this->executeSelect($parsedStatement, $boundParams, $connection);
+            }
+
+            if ($parsedStatement instanceof InsertStatement) {
+                return $this->executeInsert($parsedStatement, $boundParams, $connection);
+            }
+
+            if ($parsedStatement instanceof SetStatement) {
+                return new MySQLQueryResult(); // ignore for now
+            }
+
+            if ($parsedStatement instanceof DropStatement) {
+                return $this->executeDrop($parsedStatement, $boundParams, $connection);
+            }
+
+            if ($parsedStatement instanceof CreateStatement) {
+                return $this->executeCreate($parsedStatement, $boundParams, $connection);
+            }
             
-            return $this->executeUse($useStatementMatch[1], $boundParams, $connection);
+        } catch (\Exception $e) {
+            throw new \RuntimeException("Can't execute query: ".$queryString, 0, $e);
         }
         
-        $parser = new \PhpMyAdmin\SqlParser\Parser($queryString);
-        
-        $parsedStatement = $parser->statements[0];
-        
-        if ($parsedStatement instanceof SelectStatement) {
-            return $this->executeSelect($parsedStatement, $boundParams, $connection);
-        }
-        
-        if ($parsedStatement instanceof InsertStatement) {
-            return $this->executeInsert($parsedStatement, $boundParams, $connection);
-        }
-        
-        if ($parsedStatement instanceof SetStatement) {
-            return new MySQLQueryResult(); // ignore for now
-        }
-        
-        if ($parsedStatement instanceof DropStatement) {
-            return $this->executeDrop($parsedStatement, $boundParams, $connection);
-        }
-        
-        if ($parsedStatement instanceof CreateStatement) {
-            return $this->executeCreate($parsedStatement, $boundParams, $connection);
-        }
-        
-        throw new \RuntimeException("Only SELECT and INSERT statements are currently supported. Got: ".$queryString
-            .". Parsed statement: ".var_export($parsedStatement, true));
+        throw new \RuntimeException("Only SELECT and INSERT statements are currently supported. Got: " . $queryString
+            . ". Parsed statement: " . var_export($parsedStatement, true));
     }
 
     /**
@@ -158,7 +164,12 @@ class MySQLServer
                 $joinedTableObject = $this->getDatabase($joinedDatabaseName, $connection)->getTable($joinedTableName);
                 $joinedTableFieldNames = $joinedTableObject->getColumnNames();
                 
-                $joinOnExpressionAST = $this->parser->parse($joinInfoObject->on[0]->expr);
+                try {
+                    $joinOnExpressionAST = $this->parser->parse($joinInfoObject->on[0]->expr);
+                } catch (\Exception $e) {
+                    throw new \RuntimeException(
+                        "Can't parse JOIN ON expression: '".$joinInfoObject->on[0]->expr."'", 0, $e);
+                }
                 
                 $newJoinedTablesRows = [];
                 
@@ -213,7 +224,11 @@ class MySQLServer
             $fullWhereConditionString = "1";
         }
         
-        $parsedWhereConditionAST = $this->parser->parse($fullWhereConditionString);
+        try {
+            $parsedWhereConditionAST = $this->parser->parse($fullWhereConditionString);
+        } catch (\Exception $e) {
+            throw new \RuntimeException("Can't parse WHERE condition: ".$fullWhereConditionString, 0, $e);
+        }
         
         // Now just go over all rows in the table and evaluate where condition against each row
         
@@ -262,7 +277,7 @@ class MySQLServer
                 foreach ($tableObject->getColumnNames() as $fieldName) {
                     $parsedSelectExpressions[] = [
                         "alias" => $fieldName,
-                        "AST" => $this->parser->parse($databaseName.".".$tableNameOrAlias.".".$fieldName),
+                        "AST" => new TableFieldExpression($fieldName, $tableNameOrAlias, $databaseName),
                     ];
                 }
                 

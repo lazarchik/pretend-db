@@ -49,14 +49,12 @@ class Lexer
         
         $tokens = new TokenSequence();
         
+        /** @var string[] */
+        $stringLiterals = [];
+        
         while (strlen($queryString) > 0) {
             
             $nextToken = $this->parseNextToken($queryString);
-            
-            // No need to store whitespaces in the token sequence.
-            if (!$nextToken->isWhitespace()) {
-                $tokens->addToken($nextToken);
-            }
             
             if (strlen($nextToken->getSourceString()) <= 0) {
                 throw new \RuntimeException(
@@ -65,9 +63,55 @@ class Lexer
             
             // Now remove the token from the query string, so that we can advance to parsing the next token
             $queryString = substr($queryString, strlen($nextToken->getSourceString()));
+            
+            // No need to store whitespaces in the token sequence.
+            if ($nextToken->isWhitespace()) {
+                continue;
+            }
+                
+            // String literals that stand next to each other should be concatenated.
+            if ($nextToken->isStringLiteral()) {
+                $stringLiterals[] = $this->unescapeStringLiteral($nextToken->getSourceString());
+                continue;
+            }
+            
+            if ($stringLiterals) {
+                
+                $tokens->addToken(Token::initStringLiteral(implode($stringLiterals)));
+                
+                $stringLiterals = [];
+                
+                continue;
+            }
+            
+            $tokens->addToken($nextToken);
+        }
+        
+        if ($stringLiterals) {
+            
+            $tokens->addToken(Token::initStringLiteral(implode($stringLiterals)));
         }
         
         return $tokens;
+    }
+
+    /**
+     * @param string $escapedStringLiteral
+     * @return string
+     */
+    protected function unescapeStringLiteral($escapedStringLiteral)
+    {
+        $escapedStringLiteralWithoutSurroundingQuotes = trim($escapedStringLiteral, "'\"");
+            
+        $semiUnescapedStringLiteral = str_replace([
+            "\\0", "\\'", "\\\"", "\\b", "\\n", "\\r", "\\t", "\\Z",
+        ], [
+            "\x00", "'", "\"", "\x08", "\n", "\r", "\t", "\x1A"
+        ], $escapedStringLiteralWithoutSurroundingQuotes);
+        
+        $unescapedStringLiteral = preg_replace("~\\\\([^\\\\])~", "$1", $semiUnescapedStringLiteral);
+        
+        return $unescapedStringLiteral;
     }
 
     /**
@@ -170,6 +214,12 @@ class Lexer
             return Token::initNumberLiteral($tokenSourceString);
         }
         
-        throw new \RuntimeException("Can't parse any known literals: '".$queryString."'");
+        if (null !== (
+            $tokenSourceString = $this->checkTokenRegex($queryString, "'(?:\\\\.|[^'\\\\])*'|\"(?:\\\\.|[^\"\\\\])*\""))
+        ) {
+            return Token::initStringLiteral($tokenSourceString);
+        }
+        
+        throw new \RuntimeException("Can't parse any known tokens: '".$queryString."'");
     }
 }

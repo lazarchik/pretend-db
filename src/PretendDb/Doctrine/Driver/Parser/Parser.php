@@ -11,6 +11,7 @@ use PretendDb\Doctrine\Driver\Parser\Expression\ExpressionInterface;
 use PretendDb\Doctrine\Driver\Parser\Expression\FunctionCallExpression;
 use PretendDb\Doctrine\Driver\Parser\Expression\NumberLiteralExpression;
 use PretendDb\Doctrine\Driver\Parser\Expression\SimplePlaceholderExpression;
+use PretendDb\Doctrine\Driver\Parser\Expression\StringLiteralExpression;
 use PretendDb\Doctrine\Driver\Parser\Expression\TableFieldExpression;
 
 /**
@@ -27,7 +28,7 @@ class Parser
     
     /** @var Grammar */
     protected $grammar;
-
+    
     /**
      * @param Lexer $lexer
      */
@@ -116,7 +117,16 @@ class Parser
         }
         
         if ($currentToken->isNumberLiteral()) {
-            return $this->parseNumberLiteral($tokens);
+            $token = $tokens->getCurrentTokenAndAdvanceCursor();
+            
+            return new NumberLiteralExpression((float) $token->getSourceString());
+        }
+        
+        if ($currentToken->isStringLiteral()) {
+            
+            $token = $tokens->getCurrentTokenAndAdvanceCursor();
+        
+            return new StringLiteralExpression((string) $token->getSourceString());
         }
         
         if ($currentToken->isSimplePlaceholder()) {
@@ -144,7 +154,8 @@ class Parser
             return $expressionInParentheses;
         }
         
-        throw new \RuntimeException("Unknown token in simple expression: ".$tokens->getCurrentToken()->dump());
+        throw new \RuntimeException("Unknown token in simple expression: ".$tokens->getCurrentToken()->dump()
+            .". Tokens: ".$tokens->dump());
     }
 
     /**
@@ -195,23 +206,6 @@ class Parser
         }
         
         return new FunctionCallExpression($functionNameToken->getSourceString(), $functionArguments);
-    }
-
-    /**
-     * @param TokenSequence $tokens
-     * @return NumberLiteralExpression
-     * @throws \RuntimeException
-     */
-    protected function parseNumberLiteral($tokens)
-    {
-        $token = $tokens->getCurrentTokenAndAdvanceCursor();
-        
-        if (!$token->isNumberLiteral()) {
-            throw new \RuntimeException("First token of a number literal expression must be a number literal. Got: "
-                .$token->dump());
-        }
-        
-        return new NumberLiteralExpression((float) $token->getSourceString());
     }
 
     /**

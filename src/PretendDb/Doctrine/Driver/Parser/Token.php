@@ -68,6 +68,15 @@ class Token
      * @param string $sourceString
      * @return Token
      */
+    public static function initStringLiteral($sourceString)
+    {
+        return new self(self::TYPE_STRING_LITERAL, $sourceString);
+    }
+
+    /**
+     * @param string $sourceString
+     * @return Token
+     */
     public static function initIdentifier($sourceString)
     {
         return new self(self::TYPE_IDENTIFIER, $sourceString);
@@ -326,6 +335,14 @@ class Token
     public function isNumberLiteral()
     {
         return self::TYPE_NUMBER_LITERAL === $this->type;
+    }
+    
+    /*
+     * @return bool
+     */
+    public function isStringLiteral()
+    {
+        return self::TYPE_STRING_LITERAL === $this->type;
     }
     
     /*

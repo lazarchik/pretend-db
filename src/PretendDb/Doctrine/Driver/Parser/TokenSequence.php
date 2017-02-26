@@ -66,6 +66,19 @@ class TokenSequence
     
     public function advanceCursor()
     {
-        $this->currentTokenIndex++;;
+        $this->currentTokenIndex++;
+    }
+
+    /**
+     * @return string
+     */
+    public function dump()
+    {
+        $tokenDumps = [];
+        foreach ($this->tokens as $token) {
+            $tokenDumps[] = $token->dump();
+        }
+        
+        return "[".implode(", ", $tokenDumps)."]";
     }
 }
