@@ -12,6 +12,7 @@ use PhpMyAdmin\SqlParser\Statements\DropStatement;
 use PhpMyAdmin\SqlParser\Statements\InsertStatement;
 use PhpMyAdmin\SqlParser\Statements\SelectStatement;
 use PhpMyAdmin\SqlParser\Statements\SetStatement;
+use PhpMyAdmin\SqlParser\Statements\TruncateStatement;
 use PretendDb\Doctrine\Driver\Expression\EvaluationContext;
 use PretendDb\Doctrine\Driver\Parser\Expression\ExpressionInterface;
 use PretendDb\Doctrine\Driver\Parser\Expression\TableFieldExpression;
@@ -120,6 +121,9 @@ class MySQLServer
                 return $this->executeCreate($parsedStatement, $boundParams, $connection);
             }
             
+            if ($parsedStatement instanceof TruncateStatement) {
+                return $this->executeTruncate($parsedStatement, $boundParams, $connection);
+            }
             
         } catch (\Exception $e) {
             throw new \RuntimeException("Can't execute query: ".$queryString, 0, $e);
@@ -547,6 +551,23 @@ class MySQLServer
         }
         
         $databaseObject->createTable($tableName, $columnsMeta);
+        
+        return new MySQLQueryResult();
+    }
+
+    /**
+     * @param TruncateStatement $parsedStatement
+     * @param array $boundParams
+     * @param MySQLConnection $connection
+     * @return MySQLQueryResult
+     * @throws \RuntimeException
+     */
+    protected function executeTruncate($parsedStatement, $boundParams, $connection)
+    {
+        $databaseName = $parsedStatement->table->database;
+        $tableName = $parsedStatement->table->table;
+        
+        $this->getDatabase($databaseName, $connection)->getTable($tableName)->truncate();
         
         return new MySQLQueryResult();
     }

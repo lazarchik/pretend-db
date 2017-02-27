@@ -165,4 +165,9 @@ class MySQLTable
     {
         return array_flip($this->columnIndexes);
     }
+
+    public function truncate()
+    {
+        $this->rows = [];
+    }
 }
