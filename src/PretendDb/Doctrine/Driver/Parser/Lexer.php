@@ -188,23 +188,32 @@ class Lexer
             return Token::initComma($tokenSourceString);
         }
         
-        if (null !== ($tokenSourceString = $this->checkTokenRegex($queryString, "AND|&&"))) {
+        if (null !== ($tokenSourceString = $this->checkTokenRegex($queryString, "&&"))) {
             return Token::initAnd($tokenSourceString);
-        }
-        
-        if (null !== ($tokenSourceString = $this->checkTokenString($queryString, "NOT"))) {
-            return Token::initLowPrecedenceNot($tokenSourceString);
         }
         
         if (null !== ($tokenSourceString = $this->checkTokenString($queryString, "!"))) {
             return Token::initHighPrecedenceNot($tokenSourceString);
         }
         
-        if (null !== ($tokenSourceString = $this->checkTokenRegex($queryString, "OR|\\|\\|"))) {
+        if (null !== ($tokenSourceString = $this->checkTokenRegex($queryString, "\\|\\|"))) {
             return Token::initOr($tokenSourceString);
         }
         
         if (null !== ($tokenSourceString = $this->checkTokenRegex($queryString, "[a-z\$_][a-z0-9\$_]+"))) {
+            
+            if (0 === strcasecmp($tokenSourceString, "OR")) {
+                return Token::initOr($tokenSourceString);
+            }
+            
+            if (0 === strcasecmp($tokenSourceString, "AND")) {
+                return Token::initAnd($tokenSourceString);
+            }
+            
+            if (0 === strcasecmp($tokenSourceString, "NOT")) {
+                return Token::initLowPrecedenceNot($tokenSourceString);
+            }
+            
             return Token::initIdentifier($tokenSourceString);
         }
         

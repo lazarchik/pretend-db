@@ -15,6 +15,8 @@ use Doctrine\Tests\DBAL\Driver\AbstractMySQLDriverTest;
 use Entities\BlogPost;
 use Entities\User;
 use PretendDb\Doctrine\Driver\MySQLDriver;
+use PretendDb\Doctrine\Driver\Parser\Lexer;
+use PretendDb\Doctrine\Driver\Parser\Parser;
 
 class PretendDbTest extends AbstractMySQLDriverTest
 {
@@ -265,5 +267,14 @@ class PretendDbTest extends AbstractMySQLDriverTest
         $result = $queryBuilder->getQuery()->getArrayResult();
         
         $this->assertEquals([], $result);
+    }
+    
+    public function testTokenizeOr()
+    {
+        $parser = new Parser(new Lexer());
+        
+        // If bug is present, this will throw an exception:
+        // Unknown token in simple expression: OR(or). Tokens: [OR(or), IDENTIFIER(ganization_name)]
+        $parser->parse("organization_name");
     }
 }
