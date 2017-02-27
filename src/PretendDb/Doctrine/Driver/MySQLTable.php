@@ -110,6 +110,7 @@ class MySQLTable
     )
     {
         $foundRows = [];
+        
         foreach ($this->rows as $rowValues) {
 
             $rowValuesWithFieldNames = $this->populateRowValuesWithFieldNames($rowValues);
@@ -118,7 +119,7 @@ class MySQLTable
             $newEvaluationContext->setTableRow($databaseName, $tableNameOrAlias, $rowValuesWithFieldNames);
 
             $evaluationResult = $expressionAST->evaluate($newEvaluationContext);
-
+            
             if ($evaluationResult) {
                 $foundRows[] = $rowValuesWithFieldNames;
             }

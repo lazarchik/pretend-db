@@ -82,7 +82,8 @@ class EvaluationContext
     public function getFieldValue($fieldName, $tableNameOrAlias, $databaseName)
     {
         if (!array_key_exists($fieldName, $this->fieldValues)) {
-            throw new \RuntimeException("Unknown field: ".$fieldName);
+            throw new \RuntimeException(
+                "Unknown field: ".$fieldName . ". Known fields: ".implode(", ", array_keys($this->fieldValues)));
         }
         
         // If table name or alias is not specified, make sure there's no ambiguity

@@ -120,6 +120,7 @@ class MySQLServer
                 return $this->executeCreate($parsedStatement, $boundParams, $connection);
             }
             
+            
         } catch (\Exception $e) {
             throw new \RuntimeException("Can't execute query: ".$queryString, 0, $e);
         }
@@ -262,12 +263,6 @@ class MySQLServer
             foreach ($plainFoundRows as $tableRowFields) {
                 $foundRows[] = [$tableNameOrAlias => $tableRowFields];
             }
-            
-            $foundRows = [
-                $tableNameOrAlias => $tableObject->findRowsSatisfyingAnExpression(
-                    $parsedWhereConditionAST, $evaluationContext, $databaseName, $tableNameOrAlias
-                ),
-            ];
         }
         
         $parsedSelectExpressions = [];
@@ -299,6 +294,7 @@ class MySQLServer
         $queryResultsTable = new MySQLTable($queryResultsTableColumnMetas);
         
         $queryResults = [];
+        
         foreach ($foundRows as $rowNumber => $foundRowTables) {
             
             $evaluationContext = new EvaluationContext();
@@ -306,7 +302,6 @@ class MySQLServer
             $evaluationContext->addTableAliases($tableAliases);
             
             foreach ($foundRowTables as $joinTableAliasOrName => $joinTableRowFields) {
-                
                 $evaluationContext->setTableRow($databaseName, $joinTableAliasOrName, $joinTableRowFields);
             }
             
@@ -316,7 +311,15 @@ class MySQLServer
                 /** @var ExpressionInterface $selectExpressionAST */
                 $selectExpressionAST = $parsedSelectExpression["AST"];
                 
-                $queryResults[$rowNumber][$selectExpressionAlias] = $selectExpressionAST->evaluate($evaluationContext);
+                try {
+                    $selectExpressionEvaluationResult = $selectExpressionAST->evaluate($evaluationContext);
+                    
+                    $queryResults[$rowNumber][$selectExpressionAlias] = $selectExpressionEvaluationResult;
+                    
+                } catch (\Exception $e) {
+                    throw new \RuntimeException(
+                        "Can't evaluate select expression: ".var_export($selectExpressionAST, true), 0, $e);
+                }
             }
             
             $queryResultsTable->insertRow($queryResults[$rowNumber]);
@@ -333,7 +336,7 @@ class MySQLServer
      * @param array $boundParams
      * @return mixed
      */
-    protected function evaluateValue($value, $boundParams)
+    protected function evaluateValue($value, &$boundParams)
     {
         if ("?" == $value) {
             return array_shift($boundParams);
