@@ -3,7 +3,7 @@
   "description": "A Doctrine driver that emulates basic MySQL functionality. Can be used to speed up automated tests.",
   "require": {
     "doctrine/dbal": ">=2.5-dev,<2.7-dev",
-    "phpunit/phpunit": "7.*",
+    "phpunit/phpunit": "~6.2",
     "phpmyadmin/sql-parser": "^4.1"
   },
   "require-dev": {
