@@ -1,8 +1,4 @@
 <?php
-/**
- * @author: Eugene Lazarchik
- * @date: 2/25/17
- */
 
 namespace PretendDb\Doctrine\Driver;
 

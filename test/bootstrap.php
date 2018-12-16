@@ -1,8 +1,4 @@
 <?php
-/**
- * @author: Eugene Lazarchik
- * @date: 7/6/16
- */
 
 $objComposerAutoloader = require __DIR__.'/../vendor/autoload.php';
 

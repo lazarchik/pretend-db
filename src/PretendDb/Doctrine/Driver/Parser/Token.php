@@ -1,8 +1,4 @@
 <?php
-/**
- * @author: Eugene Lazarchik
- * @date: 2/18/17
- */
 
 namespace PretendDb\Doctrine\Driver\Parser;
 
@@ -39,6 +35,7 @@ class Token
     const TYPE_COMMA                                    = "COMMA";
     const TYPE_WHITESPACE                               = "WHITESPACE";
     const TYPE_IDENTIFIER                               = "IDENTIFIER";
+    const TYPE_IN                                       = "IN";
     
     /** @var int|null */
     protected $type;
@@ -269,6 +266,15 @@ class Token
     public static function initLowPrecedenceNot($sourceString)
     {
         return new self(self::TYPE_LOW_PRECEDENCE_NOT, $sourceString);
+    }
+
+    /**
+     * @param string $sourceString
+     * @return Token
+     */
+    public static function initIn($sourceString)
+    {
+        return new self(self::TYPE_IN, $sourceString);
     }
 
     /**
@@ -505,5 +511,13 @@ class Token
     public function isLowPrecedenceNot()
     {
         return self::TYPE_LOW_PRECEDENCE_NOT === $this->type;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isIn()
+    {
+        return self::TYPE_IN === $this->type;
     }
 }

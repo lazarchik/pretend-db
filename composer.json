@@ -1,12 +1,6 @@
 {
-  "name": "lazarchik/pretend-db",
+  "name": "lzr/pretend-db",
   "description": "A Doctrine driver that emulates basic MySQL functionality. Can be used to speed up automated tests.",
-  "authors": [
-    {
-      "name": "Eugene Lazarchik",
-      "email": "evgenius.lazarchik@gmail.com"
-    }
-  ],
   "require": {
     "doctrine/dbal": ">=2.5-dev,<2.7-dev",
     "phpunit/phpunit": "4.8.*",

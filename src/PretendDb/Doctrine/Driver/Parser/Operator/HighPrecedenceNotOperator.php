@@ -1,8 +1,4 @@
 <?php
-/**
- * @author: Eugene Lazarchik
- * @date: 2/21/17
- */
 
 namespace PretendDb\Doctrine\Driver\Parser\Operator;
 

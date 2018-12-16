@@ -1,8 +1,4 @@
 <?php
-/**
- * @author: Eugene Lazarchik
- * @date: 2/18/17
- */
 
 namespace PretendDb\Doctrine\Driver\Parser;
 
@@ -212,6 +208,10 @@ class Lexer
             
             if (0 === strcasecmp($tokenSourceString, "NOT")) {
                 return Token::initLowPrecedenceNot($tokenSourceString);
+            }
+            
+            if (0 === strcasecmp($tokenSourceString, "IN")) {
+                return Token::initIn($tokenSourceString);
             }
             
             return Token::initIdentifier($tokenSourceString);

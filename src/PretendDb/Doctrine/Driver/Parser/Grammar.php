@@ -1,8 +1,4 @@
 <?php
-/**
- * @author: Eugene Lazarchik
- * @date: 2/21/17
- */
 
 namespace PretendDb\Doctrine\Driver\Parser;
 
@@ -14,6 +10,7 @@ use PretendDb\Doctrine\Driver\Parser\Operator\EqualOperator;
 use PretendDb\Doctrine\Driver\Parser\Operator\GreaterThanOperator;
 use PretendDb\Doctrine\Driver\Parser\Operator\GreaterThanOrEqualOperator;
 use PretendDb\Doctrine\Driver\Parser\Operator\HighPrecedenceNotOperator;
+use PretendDb\Doctrine\Driver\Parser\Operator\InOperator;
 use PretendDb\Doctrine\Driver\Parser\Operator\LessThanOperator;
 use PretendDb\Doctrine\Driver\Parser\Operator\LessThanOrEqualOperator;
 use PretendDb\Doctrine\Driver\Parser\Operator\LowPrecedenceNotOperator;
@@ -67,6 +64,7 @@ class Grammar
             new GreaterThanOrEqualOperator(),
             new LessThanOperator(),
             new LessThanOrEqualOperator(),
+            new InOperator(),
         ];
     }
 

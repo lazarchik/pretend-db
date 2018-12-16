@@ -3,11 +3,11 @@
 namespace PretendDb\Doctrine\Driver\Parser\Operator;
 
 
-use PretendDb\Doctrine\Driver\Parser\Expression\ComparisonExpression;
 use PretendDb\Doctrine\Driver\Parser\Expression\ExpressionInterface;
+use PretendDb\Doctrine\Driver\Parser\Expression\OrExpression;
 use PretendDb\Doctrine\Driver\Parser\Token;
 
-class NotEqualOperator extends AbstractOperator
+class InOperator extends AbstractOperator
 {
     /**
      * @return int
@@ -47,7 +47,7 @@ class NotEqualOperator extends AbstractOperator
      */
     public function matchesToken($token)
     {
-        return $token->isNotEqual();
+        return $token->isIn();
     }
 
     /**
@@ -56,6 +56,6 @@ class NotEqualOperator extends AbstractOperator
      */
     public function initAST($operands)
     {
-        return new ComparisonExpression("!=", $operands[0], $operands[1]);
+        return new OrExpression($operands[0], $operands[1]);
     }
 }

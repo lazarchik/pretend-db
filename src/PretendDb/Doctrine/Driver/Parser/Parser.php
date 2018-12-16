@@ -1,8 +1,4 @@
 <?php
-/**
- * @author: Eugene Lazarchik
- * @date: 2/18/17
- */
 
 namespace PretendDb\Doctrine\Driver\Parser;
 
@@ -62,11 +58,15 @@ class Parser
         
         while ($binaryOperator && $binaryOperator->getPrecedence() >= $minPrecedence) {
             
-            $tokens->advanceCursor(); // Skip the binary operator token.
+            $binaryOperatorToken = $tokens->getCurrentTokenAndAdvanceCursor();
             
             $operatorPrecedence = $binaryOperator->getPrecedence();
             
             $rightOperandMinPrecedence = $operatorPrecedence + ($binaryOperator->isLeftAssociative() ? 1 : 0);
+            
+            if ($binaryOperatorToken->isIn()) {
+                throw new \RuntimeException("IN operator is not supported yet");
+            }
             
             $rightOperand = $this->parseExpression($tokens, $rightOperandMinPrecedence);
             

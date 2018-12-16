@@ -1,8 +1,4 @@
 <?php
-/**
- * @author: Eugene Lazarchik
- * @date: 7/6/16
- */
 
 namespace PretendDb;
 
@@ -69,34 +65,36 @@ class PretendDbTest extends AbstractMySQLDriverTest
         $this->testUserEntity3->name = "new_user3";
         $this->entityMgr->persist($this->testUserEntity3);
         
+        $blogPostCreationTime = new \DateTime("now");
+        
         $this->testBlogPostEntities = [];
         
         $this->testBlogPostEntities[1] = new BlogPost();
         $this->testBlogPostEntities[1]->postID = 1;
         $this->testBlogPostEntities[1]->userID = 1;
         $this->testBlogPostEntities[1]->body = "post1";
-        $this->testBlogPostEntities[1]->createdAt = new \DateTime();
+        $this->testBlogPostEntities[1]->createdAt = $blogPostCreationTime;
         $this->entityMgr->persist($this->testBlogPostEntities[1]);
         
         $this->testBlogPostEntities[2] = new BlogPost();
         $this->testBlogPostEntities[2]->postID = 2;
         $this->testBlogPostEntities[2]->userID = 1;
         $this->testBlogPostEntities[2]->body = "post2_user1";
-        $this->testBlogPostEntities[2]->createdAt = new \DateTime();
+        $this->testBlogPostEntities[2]->createdAt = $blogPostCreationTime;
         $this->entityMgr->persist($this->testBlogPostEntities[2]);
         
         $this->testBlogPostEntities[3] = new BlogPost();
         $this->testBlogPostEntities[3]->postID = 3;
         $this->testBlogPostEntities[3]->userID = 2;
         $this->testBlogPostEntities[3]->body = "post3_user2";
-        $this->testBlogPostEntities[3]->createdAt = new \DateTime();
+        $this->testBlogPostEntities[3]->createdAt = $blogPostCreationTime;
         $this->entityMgr->persist($this->testBlogPostEntities[3]);
         
         $this->testBlogPostEntities[4] = new BlogPost();
         $this->testBlogPostEntities[4]->postID = 4;
         $this->testBlogPostEntities[4]->userID = 123;
         $this->testBlogPostEntities[4]->body = "post4_user123";
-        $this->testBlogPostEntities[4]->createdAt = new \DateTime();
+        $this->testBlogPostEntities[4]->createdAt = $blogPostCreationTime;
         $this->entityMgr->persist($this->testBlogPostEntities[4]);
         
         

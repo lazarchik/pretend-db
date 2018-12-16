@@ -1,8 +1,4 @@
 <?php
-/**
- * @author: Eugene Lazarchik
- * @date: 7/7/16
- */
 
 namespace Entities;
 

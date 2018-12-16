@@ -7,11 +7,6 @@ use Doctrine\DBAL\Driver\AbstractMySQLDriver;
 use PretendDb\Doctrine\Driver\Parser\Lexer;
 use PretendDb\Doctrine\Driver\Parser\Parser;
 
-
-/**
- * @author: Eugene Lazarchik
- * @date: 7/6/16
- */
 class MySQLDriver extends AbstractMySQLDriver
 {
     /**
