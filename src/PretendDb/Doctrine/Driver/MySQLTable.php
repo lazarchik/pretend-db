@@ -16,6 +16,9 @@ class MySQLTable
     
     /** @var array */
     protected $rows = [];
+    
+    /** @var array [$partitionName => $partitionValue] */
+    protected $partitions = [];
 
     /**
      * @param MySQLColumnMeta[] $columns
@@ -165,5 +168,15 @@ class MySQLTable
     public function truncate()
     {
         $this->rows = [];
+    }
+
+    /**
+     * @TODO More graceful checks (if partition already exists, etc)
+     * @param string $partitionName
+     * @param string $partitionValue
+     */
+    public function addPartition(string $partitionName, string $partitionValue)
+    {
+        $this->partitions[$partitionName] = $partitionValue;
     }
 }

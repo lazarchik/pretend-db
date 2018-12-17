@@ -3,12 +3,14 @@
 namespace PretendDb\Doctrine\Driver;
 
 
+use PhpMyAdmin\SqlParser\Statements\AlterStatement;
 use PhpMyAdmin\SqlParser\Statements\CreateStatement;
 use PhpMyAdmin\SqlParser\Statements\DropStatement;
 use PhpMyAdmin\SqlParser\Statements\InsertStatement;
 use PhpMyAdmin\SqlParser\Statements\SelectStatement;
 use PhpMyAdmin\SqlParser\Statements\SetStatement;
 use PhpMyAdmin\SqlParser\Statements\TruncateStatement;
+use PhpMyAdmin\SqlParser\Token;
 use PretendDb\Doctrine\Driver\Expression\EvaluationContext;
 use PretendDb\Doctrine\Driver\Parser\Expression\ExpressionInterface;
 use PretendDb\Doctrine\Driver\Parser\Expression\TableFieldExpression;
@@ -121,12 +123,18 @@ class MySQLServer
                 return $this->executeTruncate($parsedStatement, $boundParams, $connection);
             }
             
+            if ($parsedStatement instanceof AlterStatement) {
+                return $this->executeAlter($parsedStatement, $boundParams, $connection);
+            }
+            
         } catch (\Exception $e) {
             throw new \RuntimeException("Can't execute query: ".$queryString.", ".$e->getMessage(), 0, $e);
         }
         
-        throw new \RuntimeException("Only SELECT and INSERT statements are currently supported. Got: " . $queryString
-            . ". Parsed statement: " . var_export($parsedStatement, true));
+        throw new \RuntimeException(
+            "Only SELECT, INSERT, SET, DROP, CREATE and TRUNCATE statements are currently supported. Got: "
+                .$queryString.". Parsed statement: " . var_export($parsedStatement, true)
+        );
     }
 
     /**
@@ -566,5 +574,120 @@ class MySQLServer
         $this->getDatabase($databaseName, $connection)->getTable($tableName)->truncate();
         
         return new MySQLQueryResult();
+    }
+
+    /**
+     * @param AlterStatement $parsedStatement
+     * @param array $boundParams
+     * @param MySQLConnection $connection
+     */
+    protected function executeAlter($parsedStatement, $boundParams, $connection)
+    {
+        $databaseName = $parsedStatement->table->database;
+        $tableName = $parsedStatement->table->table;
+        
+        $tableObject = $this->getDatabase($databaseName, $connection)->getTable($tableName);
+        
+        foreach ($parsedStatement->altered as $alterOperation) {
+            
+            if ("ADD PARTITION" != join(" ", $alterOperation->options->options)) {
+                throw new \InvalidArgumentException("Unknown alter statement type: ".var_export($alterOperation, true));
+                
+            }
+            
+            // PHPMyAdmin parser doesn't support parsing these. Have to parse manually
+            $parsedAddPartitionStatement = $this->parseAddPartitionStatement($alterOperation->unknown);
+
+            $tableObject->addPartition(
+                $parsedAddPartitionStatement->partitionName,
+                $parsedAddPartitionStatement->partitionValue
+            );
+        }
+    }
+
+    /**
+     * @param Token[] $tokens
+     * @return ParsedAddPartitionStatement
+     */
+    protected function parseAddPartitionStatement(array $tokens): ParsedAddPartitionStatement
+    {
+        // https://dev.mysql.com/doc/refman/5.5/en/alter-table.html:
+        //     ADD PARTITION (partition_definition)
+        
+        // First and last tokens should be parentheses
+        
+        $firstToken = array_shift($tokens);
+        $lastToken = array_pop($tokens);
+        
+        if ("(" != $firstToken->token || ")" != $lastToken->token) {
+            throw new \InvalidArgumentException(
+                "Partition definition should be surrounded by parentheses, got: "
+                    .$firstToken->value.", ".$lastToken->value
+            );
+        }
+        
+        return $this->parsePartitionDefinition($tokens);
+    }
+
+    /**
+     * @TODO Check if spaces need to be handled more gracefully (if several spaces in a row are allowed, etc).
+     * @param Token[] $tokens
+     * @return ParsedAddPartitionStatement
+     */
+    protected function parsePartitionDefinition(array $tokens): ParsedAddPartitionStatement
+    {
+        // https://dev.mysql.com/doc/refman/5.5/en/create-table.html, see "partition_definition"
+        
+        $parsedStatement = new ParsedAddPartitionStatement();
+        
+        $partitionToken = array_shift($tokens);
+        $spaceToken = array_shift($tokens);
+        
+        if ("PARTITION" != $partitionToken->keyword || " " != $spaceToken->token) {
+            throw new \InvalidArgumentException(
+                "Partition definition should start with 'PARTITION ', got: "
+                    .$partitionToken->value.", ".$spaceToken->value
+            );
+        }
+        
+        $parsedStatement->partitionName = array_shift($tokens)->value;
+        $spaceToken = array_shift($tokens);
+        
+        if (" " != $spaceToken->token) {
+            throw new \InvalidArgumentException(
+                "There should be a space after partition name, got: ".$spaceToken->value
+            );
+        }
+        
+        $valuesToken = array_shift($tokens);
+        $spaceToken = array_shift($tokens);
+        $inToken = array_shift($tokens);
+        $space2Token = array_shift($tokens);
+
+        if ("VALUES" != $valuesToken->keyword || " " != $spaceToken->token || "IN" != $inToken->keyword
+                || " " != $space2Token->token) {
+            throw new \InvalidArgumentException(
+                "Expected 'VALUES IN' in partition definition, got: "
+                . $valuesToken->value . ", " . $spaceToken->value . ", " . $inToken->value . ", " . $space2Token->value
+            );
+        }
+        
+        $firstToken = array_shift($tokens);
+        $lastToken = array_pop($tokens);
+        
+        if ("(" != $firstToken->token || ")" != $lastToken->token) {
+            throw new \InvalidArgumentException(
+                "Parentheses are expected around the IN clause, got: "
+                    .$firstToken->value.", ".$lastToken->value
+            );
+        }
+        
+        $parsedStatement->partitionValue = array_shift($tokens)->value;
+        
+        if ($tokens) {
+            throw new \InvalidArgumentException("Unsupported ADD PARTITION clauses: ".var_export($tokens, true));
+        }
+        
+        return $parsedStatement;
     }
 }
