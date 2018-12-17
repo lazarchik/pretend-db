@@ -130,9 +130,7 @@ class MySQLServer
         } catch (\Exception $e) {
             throw new \RuntimeException(
                 "Can't execute query: ".$queryString
-                ."\n\nException at ".$e->getFile().":".$e->getLine().":\n"
-                .$e->getMessage()."\n"
-                .$this->exceptionTracePrettyPrint($e)
+                ."\n\nCaused by: ".$this->exceptionTracePrettyPrint($e)."\n"
             );
         }
         
@@ -140,6 +138,27 @@ class MySQLServer
             "Only SELECT, INSERT, SET, DROP, CREATE and TRUNCATE statements are currently supported. Got: "
                 .$queryString.". Parsed statement: " . var_export($parsedStatement, true)
         );
+    }
+    
+    /**
+     * Provide a Java style exception trace
+     * From https://secure.php.net/manual/en/exception.gettraceasstring.php
+     * @param \Exception $exception
+     * @param bool true if this is a top level exception and "Caused by" doesn't need to be added
+     * @return string
+     */
+    protected function exceptionTracePrettyPrint(\Exception $e, bool $isTopLevel = true): string
+    {
+        $result = ($isTopLevel ? "" : "Caused by: ")
+            .get_class($e)." at ".$e->getFile().":".$e->getLine().":\n".$e->getMessage()."\n";
+        
+        $result .= $e->getTraceAsString()."\n";
+        
+        if ($e->getPrevious()) {
+            $result .= "\n".$this->exceptionTracePrettyPrint($e->getPrevious(), false);
+        }
+    
+        return $result;
     }
 
     /**
@@ -700,62 +719,5 @@ class MySQLServer
         }
         
         return $parsedStatement;
-    }
-    
-    /**
-     * Provide a Java style exception trace
-     * From https://secure.php.net/manual/en/exception.gettraceasstring.php
-     * @param \Exception $exception
-     * @param array|null $seen - array passed to recursive calls to accumulate trace lines already seen
-     *                     leave as NULL when calling this function
-     * @return string
-     */
-    protected function exceptionTracePrettyPrint(\Exception $e, ?array $seen = null): string
-    {
-        $starter = $seen ? 'Caused by: ' : '';
-        if (!$seen) {
-            $seen = [];
-        }
-        $trace = $e->getTrace();
-        $prev = $e->getPrevious();
-        $result = sprintf('%s%s: %s', $starter, get_class($e), $e->getMessage());
-        $file = $e->getFile();
-        $line = $e->getLine();
-        
-        while (true) {
-            $current = "$file:$line";
-            if (is_array($seen) && in_array($current, $seen)) {
-                $result .= sprintf(' ... %d more', count($trace) + 1);
-                break;
-            }
-            $result .= sprintf(
-                ' at %s%s%s(%s%s%s)',
-                count($trace) && array_key_exists('class', $trace[0])
-                    ? str_replace('\\', '.', $trace[0]['class']) : '',
-                count($trace) && array_key_exists('class', $trace[0]) && array_key_exists('function', $trace[0])
-                    ? '.' : '',
-                count($trace) && array_key_exists('function', $trace[0])
-                    ? str_replace('\\', '.', $trace[0]['function']) : '(main)',
-                $line === null ? $file : basename($file),
-                $line === null ? '' : ':',
-                $line === null ? '' : $line
-            );
-            if (is_array($seen)) {
-                $seen[] = "$file:$line";
-            }
-            if (!count($trace)) {
-                break;
-            }
-            $file = array_key_exists('file', $trace[0]) ? $trace[0]['file'] : 'Unknown Source';
-            $line = array_key_exists('file', $trace[0]) && array_key_exists('line', $trace[0]) && $trace[0]['line']
-                ? $trace[0]['line'] : null;
-            array_shift($trace);
-        }
-        
-        if ($prev) {
-            $result .= "\n".$this->exceptionTracePrettyPrint($prev, $seen);
-        }
-    
-        return $result;
     }
 }
