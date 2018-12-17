@@ -19,41 +19,31 @@ class MySQLTable
     
     /** @var array [$partitionName => $partitionValue] */
     protected $partitions = [];
+    
+    /** @var int */
+    protected $autoIncrementValue = 0;
+    
+    /** @var int|null */
+    protected $autoIncrementColumnIndex;
 
     /**
      * @param MySQLColumnMeta[] $columns
-     * @internal param string $tableName
      */
-    public function __construct($columns)
+    public function __construct(array $columns)
     {
         $this->columns = $columns;
         
         $this->columnIndexes = [];
         foreach ($columns as $columnIndex => $columnMetaObject) {
             $this->columnIndexes[$columnMetaObject->getName()] = $columnIndex;
+            
+            if ($columnMetaObject->isAutoincremented()) {
+                $this->autoIncrementColumnIndex = $columnIndex;
+            }
         }
     }
 
-    /**
-     * @param array $rows
-     * @throws \RuntimeException
-     */
-    public function setRows($rows)
-    {
-        if (array_keys($rows) != $this->columnIndexes) {
-            throw new \RuntimeException("Can't set table rows since the number of columns is incorrect. Expected "
-                .count($this->columnIndexes)." columns. Got: ".var_export($rows, true));
-        }
-        
-        $this->rows = $rows;
-    }
-
-    /**
-     * @param string $columnName
-     * @throws \RuntimeException
-     * @return int;
-     */
-    public function getColumnIndex($columnName)
+    public function getColumnIndex(string $columnName): int
     {
         if (!array_key_exists($columnName, $this->columnIndexes)) {
             throw new \RuntimeException("Can't determine column index for column ".$columnName." in table ");
@@ -63,51 +53,73 @@ class MySQLTable
     }
 
     /**
-     * @return array
-     */
-    public function getEmptyRow()
-    {
-        $row = [];
-        
-        foreach ($this->columnIndexes as $columnName => $columnIndex) {
-            $row[$columnIndex] = null;
-        }
-        
-        return $row;
-    }
-
-    /**
      * @param array $rowFields
-     * @throws \RuntimeException
+     * @return int|null Generated autoincrement ID if applicable
      */
-    public function insertRow($rowFields)
+    public function insertRow(array $rowFields): ?int
     {
-        $row = $this->getEmptyRow();
-        
-        foreach ($rowFields as $columnName => $fieldValue) {
+        $generatedAutoIncrementID = null;
+        $row = [];
+        foreach ($this->columns as $columnIndex => $columnMeta) {
+            $columnName = $columnMeta->getName();
             
-            $columnIndex = $this->getColumnIndex($columnName);
+            if ($columnMeta->isAutoincremented()) {
+                if (!empty($rowFields[$columnName])) {
+                    $row[$columnIndex] = $rowFields[$columnName];
+                    $this->autoIncrementValue = (int)$rowFields[$columnName];
+                } else {
+                    $generatedAutoIncrementID = ++$this->autoIncrementValue;
+                    $row[$columnIndex] = $generatedAutoIncrementID;
+                }
+                continue;
+            }
             
-            $row[$columnIndex] = $fieldValue;
+            if (array_key_exists($columnName, $rowFields)) {
+                if (!$columnMeta->isNullable()) {
+                    if (null === $rowFields[$columnName]) {
+                        throw new \RuntimeException("Can't assign null to field that's not nullable: ".$columnName);
+                    }
+                    
+                    $row[$columnIndex] = null;
+                    continue;
+                }
+                
+                $row[$columnIndex] = $rowFields[$columnName];
+                continue;
+            }
+            
+            if ($defaultValue = $columnMeta->getDefaultValue()) {
+                if ($defaultValue->isCurrentTimestamp()) {
+                    $row[$columnIndex] = time();
+                    continue;
+                }
+                
+                $row[$columnIndex] = $defaultValue->getValue();
+                continue;
+            }
+            
+            if ($columnMeta->isNullable()) {
+                $row[$columnIndex] = null;
+                continue;
+            }
+            
+            // TEXT fields cannot have a default value and omitting them sets them to an empty string, I think
+            
+            $row[$columnIndex] = "";
+            //throw new \RuntimeException("Missing value for required field ".$columnName);
         }
         
         $this->rows[] = $row;
+        
+        return $generatedAutoIncrementID;
     }
 
-    /**
-     * @param ExpressionInterface $expressionAST
-     * @param EvaluationContext $evaluationContext
-     * @param $databaseName
-     * @param param string $tableNameOrAlias
-     * @return array
-     */
     public function findRowsSatisfyingAnExpression(
-        $expressionAST,
-        $evaluationContext,
-        $databaseName,
-        $tableNameOrAlias
-    )
-    {
+        ExpressionInterface $expressionAST,
+        EvaluationContext $evaluationContext,
+        string $databaseName,
+        string $tableNameOrAlias
+    ): array {
         $foundRows = [];
         
         foreach ($this->rows as $rowValues) {
@@ -127,11 +139,7 @@ class MySQLTable
         return $foundRows;
     }
 
-    /**
-     * @param array $rowValues
-     * @return array
-     */
-    protected function populateRowValuesWithFieldNames($rowValues)
+    protected function populateRowValuesWithFieldNames(array $rowValues): array
     {
         $rowFields = [];
         foreach ($rowValues as $columnIndex => $fieldValue) {
@@ -144,10 +152,7 @@ class MySQLTable
         return $rowFields;
     }
 
-    /**
-     * @return array
-     */
-    public function getAllRows()
+    public function getAllRows(): array
     {
         $foundRows = [];
         foreach ($this->rows as $rowValues) {
@@ -160,12 +165,12 @@ class MySQLTable
     /**
      * @return string[]
      */
-    public function getColumnNames()
+    public function getColumnNames(): array
     {
         return array_flip($this->columnIndexes);
     }
 
-    public function truncate()
+    public function truncate(): void
     {
         $this->rows = [];
     }
@@ -175,7 +180,7 @@ class MySQLTable
      * @param string $partitionName
      * @param string $partitionValue
      */
-    public function addPartition(string $partitionName, string $partitionValue)
+    public function addPartition(string $partitionName, string $partitionValue): void
     {
         $this->partitions[$partitionName] = $partitionValue;
     }

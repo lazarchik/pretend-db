@@ -320,7 +320,14 @@ class MySQLServer
         
         $queryResultsTableColumnMetas = [];
         foreach ($parsedSelectExpressions as $parsedSelectExpression) {
-            $queryResultsTableColumnMetas[] = new MySQLColumnMeta($parsedSelectExpression["alias"]);
+            /** @FIXME: Support nullable, autoincrement, default value here */
+            $queryResultsTableColumnMetas[] = new MySQLColumnMeta(
+                $parsedSelectExpression["alias"],
+                false,
+                false,
+                null,
+                null
+            );
         }
         
         $queryResultsTable = new MySQLTable($queryResultsTableColumnMetas);
@@ -382,14 +389,13 @@ class MySQLServer
         $storageTable = $databaseObject->getTable($tableName);
         
         try {
-            $storageTable->insertRow($evaluatedFieldValues);
+            $generatedAutoIncrementID = $storageTable->insertRow($evaluatedFieldValues);
         } catch (\RuntimeException $e) {
             throw new \RuntimeException("Can't insert a row into table: "
                 .$this->formatTableName($databaseName, $tableName).". ".$e->getMessage(), 0, $e);
         }
         
-        /** @TODO support proper insert IDs */
-        return $evaluatedFieldValues[0];
+        return $generatedAutoIncrementID;
     }
 
     /**
@@ -413,7 +419,6 @@ class MySQLServer
         $evaluationContext->setBoundParamValues($boundParams);
         
         $tableName = $insertQueryAST->getTableName();
-        $fieldNames = $insertQueryAST->getFieldNames();
         
         $valueLists = $insertQueryAST->evaluate($evaluationContext);
         
@@ -421,9 +426,9 @@ class MySQLServer
         $queryResultObject->setAffectedRowsCount(count($valueLists));
         
         foreach ($valueLists as $valueListIndex => $valuesList) {
-            $insertID = $this->insertRow(null, $tableName, $valuesList, $connection);
+            $lastAutoincrementID = $this->insertRow(null, $tableName, $valuesList, $connection);
             
-            $queryResultObject->setLastInsertID($insertID);
+            $queryResultObject->setLastInsertID($lastAutoincrementID);
         }
         
         return $queryResultObject;
@@ -548,8 +553,59 @@ class MySQLServer
         
         $columnsMeta = [];
         foreach ($parsedStatement->fields as $parsedFieldToCreate) {
+            if ($parsedFieldToCreate->key) {
+                /** @FIXME: support creation of keys */
+                continue;
+            }
             
-            $columnsMeta[] = new MySQLColumnMeta($parsedFieldToCreate->name);
+            $isAutoincremented = false;
+            $isNullable = true;
+            $defaultValue = null;
+            $onUpdateValue = null;
+            if (!empty($parsedFieldToCreate->options->options)) {
+                foreach ($parsedFieldToCreate->options->options as $fieldOption) {
+                    if (is_array($fieldOption)) {
+                        switch ($fieldOption["name"]) {
+                            case "DEFAULT":
+                                $defaultValue = $this->evaluateInitValue($fieldOption["value"]);
+                                break;
+                            case "ON UPDATE":
+                                $onUpdateValue = $this->evaluateInitValue($fieldOption["value"]);
+                                break;
+                            case "COMMENT":
+                                break; // ignore
+                            default:
+                                throw new \RuntimeException(
+                                    "Unknown composite field definition option: " . var_export($fieldOption, true)
+                                );
+                        }
+
+                        continue;
+                    }
+
+                    switch ($fieldOption) {
+                        case "AUTO_INCREMENT":
+                            $isAutoincremented = true;
+                            break;
+                        case "NULL":
+                            $isNullable = true;
+                            break;
+                        case "NOT NULL":
+                            $isNullable = false;
+                            break;
+                        default:
+                            throw new \RuntimeException("Unknown field definition option: " . $fieldOption);
+                    }
+                }
+            }
+
+            $columnsMeta[] = new MySQLColumnMeta(
+                $parsedFieldToCreate->name,
+                $isNullable,
+                $isAutoincremented,
+                $defaultValue,
+                $onUpdateValue
+            );
             
             /** @TODO implement data types and other column options */
         }
@@ -695,5 +751,27 @@ class MySQLServer
         }
         
         return $parsedStatement;
+    }
+
+    protected function evaluateInitValue(string $fieldValue): MySQLColumnInitValue
+    {
+        switch (strtoupper($fieldValue)) {
+            case "NULL":
+                $defaultValue = new MySQLColumnInitValue(false, null);
+
+                return $defaultValue;
+            case "CURRENT_TIMESTAMP":
+                $defaultValue = new MySQLColumnInitValue(true, null);
+
+                return $defaultValue;
+            default:
+                $defaultValueAST = $this->parser->parse($fieldValue);
+                $defaultValue = new MySQLColumnInitValue(
+                    false,
+                    $defaultValueAST->evaluate(new EvaluationContext())
+                );
+
+                return $defaultValue;
+        }
     }
 }

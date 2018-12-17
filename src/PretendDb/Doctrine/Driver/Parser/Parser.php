@@ -90,17 +90,26 @@ class Parser
     
     public function parseInsertQuery(string $queryString): InsertQueryExpression
     {
-        $queryTokens = $this->lexer->parse($queryString);
+        $tokens = $this->lexer->parse($queryString);
         
-        $parsedInsertQuery = $this->parseInsertExpression($queryTokens);
+        $parsedInsertQuery = $this->parseInsertExpression($tokens);
         
-        if (!$queryTokens->getCurrentToken()->isInvalidToken()) {
-            throw new \RuntimeException(
-                "Unexpected token after the end of the expression: ".$queryTokens->getCurrentToken()->dump()
-            );
-        }
+        $this->ensureEndOfQuery($tokens);
         
         return $parsedInsertQuery;
+    }
+    
+    protected function ensureEndOfQuery(TokenSequence $tokens): void
+    {
+        if ($tokens->getCurrentToken()->isMinus() && $tokens->getNextToken()->isMinus()) {
+            return;
+        }
+        
+        if (!$tokens->getCurrentToken()->isInvalidToken()) {
+            throw new \RuntimeException(
+                "Unexpected token after the end of the expression: ".$tokens->getCurrentToken()->dump()
+            );
+        }
     }
 
     protected function parseSimpleExpressions(TokenSequence $tokens): ExpressionInterface

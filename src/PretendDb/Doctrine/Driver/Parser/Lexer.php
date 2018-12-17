@@ -75,8 +75,6 @@ class Lexer
                 $tokens->addToken(Token::initStringLiteral(implode($stringLiterals)));
                 
                 $stringLiterals = [];
-                
-                continue;
             }
             
             $tokens->addToken($nextToken);
