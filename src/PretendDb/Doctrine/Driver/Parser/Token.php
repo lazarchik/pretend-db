@@ -5,37 +5,38 @@ namespace PretendDb\Doctrine\Driver\Parser;
 
 class Token
 {
-    const TYPE_OPENING_PARENTHESIS                      = "OPENING_PARENTHESIS";
-    const TYPE_CLOSING_PARENTHESIS                      = "CLOSING_PARENTHESIS";
-    const TYPE_PLUS                                     = "PLUS";
-    const TYPE_MINUS                                    = "MINUS";
-    const TYPE_MULTIPLICATION                           = "MULTIPLICATION";
-    const TYPE_DIVISION                                 = "DIVISION";
-    const TYPE_EQUAL                                    = "EQUAL";
-    const TYPE_NOT_EQUAL                                = "NOT_EQUAL";
-    const TYPE_GREATER_THAN                             = "GREATER_THAN";
-    const TYPE_GREATER_THAN_OR_EQUAL                    = "GREATER_THAN_OR_EQUAL";
-    const TYPE_LESS_THAN                                = "LESS_THAN";
-    const TYPE_LESS_THAN_OR_EQUAL                       = "LESS_THAN_OR_EQUAL";
-    const TYPE_OR                                       = "OR";
-    const TYPE_AND                                      = "AND";
-    const TYPE_XOR                                      = "XOR";
-    const TYPE_HIGH_PRECEDENCE_NOT                      = "HIGH_PRECENDENCE_NOT";
-    const TYPE_LOW_PRECEDENCE_NOT                       = "LOW_PRECEDENCE_NOT";
-    const TYPE_NUMBER_LITERAL                           = "NUMBER_LITERAL";
-    const TYPE_STRING_LITERAL                           = "STRING_LITERAL";
-    const TYPE_DATETIME_LITERAL                         = "DATETIME_LITERAL";
-    const TYPE_HEXADECIMAL_LITERAL                      = "HEXADECIMAL_LITERAL";
-    const TYPE_BIT_VALUE_LITERAL                        = "BIT_VALUE_LITERAL";
-    const TYPE_BOOLEAN_LITERAL                          = "BOOLEAN_LITERAL";
-    const TYPE_NULL_LITERAL                             = "NULL_LITERAL";
-    const TYPE_SIMPLE_PLACEHOLDER                       = "SIMPLE_PLACEHOLDER";
-    const TYPE_NAMED_PLACEHOLDER                        = "NAMED_PLACEHOLDER";
-    const TYPE_PERIOD                                   = "PERIOD";
-    const TYPE_COMMA                                    = "COMMA";
-    const TYPE_WHITESPACE                               = "WHITESPACE";
-    const TYPE_IDENTIFIER                               = "IDENTIFIER";
-    const TYPE_IN                                       = "IN";
+    protected const TYPE_OPENING_PARENTHESIS                      = "OPENING_PARENTHESIS";
+    protected const TYPE_CLOSING_PARENTHESIS                      = "CLOSING_PARENTHESIS";
+    protected const TYPE_PLUS                                     = "PLUS";
+    protected const TYPE_MINUS                                    = "MINUS";
+    protected const TYPE_MULTIPLICATION                           = "MULTIPLICATION";
+    protected const TYPE_DIVISION                                 = "DIVISION";
+    protected const TYPE_EQUAL                                    = "EQUAL";
+    protected const TYPE_NOT_EQUAL                                = "NOT_EQUAL";
+    protected const TYPE_GREATER_THAN                             = "GREATER_THAN";
+    protected const TYPE_GREATER_THAN_OR_EQUAL                    = "GREATER_THAN_OR_EQUAL";
+    protected const TYPE_LESS_THAN                                = "LESS_THAN";
+    protected const TYPE_LESS_THAN_OR_EQUAL                       = "LESS_THAN_OR_EQUAL";
+    protected const TYPE_OR                                       = "OR";
+    protected const TYPE_AND                                      = "AND";
+    protected const TYPE_XOR                                      = "XOR";
+    protected const TYPE_HIGH_PRECEDENCE_NOT                      = "HIGH_PRECENDENCE_NOT";
+    protected const TYPE_LOW_PRECEDENCE_NOT                       = "LOW_PRECEDENCE_NOT";
+    protected const TYPE_NUMBER_LITERAL                           = "NUMBER_LITERAL";
+    protected const TYPE_STRING_LITERAL                           = "STRING_LITERAL";
+    protected const TYPE_DATETIME_LITERAL                         = "DATETIME_LITERAL";
+    protected const TYPE_HEXADECIMAL_LITERAL                      = "HEXADECIMAL_LITERAL";
+    protected const TYPE_BIT_VALUE_LITERAL                        = "BIT_VALUE_LITERAL";
+    protected const TYPE_BOOLEAN_LITERAL                          = "BOOLEAN_LITERAL";
+    protected const TYPE_NULL_LITERAL                             = "NULL_LITERAL";
+    protected const TYPE_SIMPLE_PLACEHOLDER                       = "SIMPLE_PLACEHOLDER";
+    protected const TYPE_NAMED_PLACEHOLDER                        = "NAMED_PLACEHOLDER";
+    protected const TYPE_PERIOD                                   = "PERIOD";
+    protected const TYPE_COMMA                                    = "COMMA";
+    protected const TYPE_WHITESPACE                               = "WHITESPACE";
+    protected const TYPE_IDENTIFIER                               = "IDENTIFIER";
+    protected const TYPE_IN                                       = "IN";
+    protected const TYPE_SELECT                                   = "SELECT";
     
     /** @var int|null */
     protected $type;
@@ -43,47 +44,28 @@ class Token
     /** @var string */
     private $sourceString;
 
-    /**
-     * @param int $type
-     * @param string $sourceString
-     */
-    protected function __construct($type, $sourceString)
+    protected function __construct(int $type, string $sourceString)
     {
         $this->type = $type;
         $this->sourceString = $sourceString;
     }
 
-    /**
-     * @return string
-     */
-    public function getSourceString()
+    public function getSourceString(): string
     {
         return $this->sourceString;
     }
 
-    /**
-     * @param string $sourceString
-     * @return Token
-     */
-    public static function initStringLiteral($sourceString)
+    public static function initStringLiteral(string $sourceString): Token
     {
         return new self(self::TYPE_STRING_LITERAL, $sourceString);
     }
-
-    /**
-     * @param string $sourceString
-     * @return Token
-     */
-    public static function initIdentifier($sourceString)
+    
+    public static function initIdentifier(string $sourceString): Token
     {
         return new self(self::TYPE_IDENTIFIER, $sourceString);
     }
-
-    /**
-     * @param string $sourceString
-     * @return Token
-     */
-    public static function initNumberLiteral($sourceString)
+    
+    public static function initNumberLiteral(string $sourceString): Token
     {
         return new self(self::TYPE_NUMBER_LITERAL, $sourceString);
     }
@@ -92,211 +74,127 @@ class Token
      * @param string $tokenSourceString
      * @return Token
      */
-    public static function initHighPrecedenceNot($tokenSourceString)
+    public static function initHighPrecedenceNot(string $tokenSourceString): Token
     {
         return new self(self::TYPE_HIGH_PRECEDENCE_NOT, $tokenSourceString);
     }
-
-    /**
-     * @param string $sourceString
-     * @return Token
-     */
-    public static function initOpeningParenthesis($sourceString)
+    
+    public static function initOpeningParenthesis(string $sourceString): Token
     {
         return new self(self::TYPE_OPENING_PARENTHESIS, $sourceString);
     }
-
-    /**
-     * @param string $sourceString
-     * @return Token
-     */
-    public static function initClosingParenthesis($sourceString)
+    
+    public static function initClosingParenthesis(string $sourceString): Token
     {
         return new self(self::TYPE_CLOSING_PARENTHESIS, $sourceString);
     }
-
-    /**
-     * @param string $sourceString
-     * @return Token
-     */
-    public static function initPeriod($sourceString)
+    
+    public static function initPeriod(string $sourceString): Token
     {
         return new self(self::TYPE_PERIOD, $sourceString);
     }
-
-    /**
-     * @param string $sourceString
-     * @return Token
-     */
-    public static function initEqual($sourceString)
+    
+    public static function initEqual(string $sourceString): Token
     {
         return new self(self::TYPE_EQUAL, $sourceString);
     }
-
-    /**
-     * @param string $sourceString
-     * @return Token
-     */
-    public static function initNotEqual($sourceString)
+    
+    public static function initNotEqual(string $sourceString): Token
     {
         return new self(self::TYPE_NOT_EQUAL, $sourceString);
     }
     
-    /**
-     * @param string $sourceString
-     * @return Token
-     */
-    public static function initGreaterThan($sourceString)
+    public static function initGreaterThan(string $sourceString): Token
     {
         return new self(self::TYPE_GREATER_THAN, $sourceString);
     }
     
-    /**
-     * @param string $sourceString
-     * @return Token
-     */
-    public static function initGreaterThanOrEqual($sourceString)
+    public static function initGreaterThanOrEqual(string $sourceString): Token
     {
         return new self(self::TYPE_GREATER_THAN_OR_EQUAL, $sourceString);
     }
     
-    /**
-     * @param string $sourceString
-     * @return Token
-     */
-    public static function initLessThan($sourceString)
+    public static function initLessThan(string $sourceString): Token
     {
         return new self(self::TYPE_LESS_THAN, $sourceString);
     }
     
-    /**
-     * @param string $sourceString
-     * @return Token
-     */
-    public static function initLessThanOrEqual($sourceString)
+    public static function initLessThanOrEqual(string $sourceString): Token
     {
         return new self(self::TYPE_LESS_THAN_OR_EQUAL, $sourceString);
     }
-
-    /**
-     * @param string $sourceString
-     * @return Token
-     */
-    public static function initSimplePlaceholder($sourceString)
+    
+    public static function initSimplePlaceholder(string $sourceString): Token
     {
         return new self(self::TYPE_SIMPLE_PLACEHOLDER, $sourceString);
     }
-
-    /**
-     * @param string $sourceString
-     * @return Token
-     */
-    public static function initComma($sourceString)
+    
+    public static function initComma(string $sourceString): Token
     {
         return new self(self::TYPE_COMMA, $sourceString);
     }
 
-    /**
-     * @param string $sourceString
-     * @return Token
-     */
-    public static function initWhitespace($sourceString)
+    public static function initWhitespace(string $sourceString): Token
     {
         return new self(self::TYPE_WHITESPACE, $sourceString);
     }
 
-    /**
-     * @param string $sourceString
-     * @return Token
-     */
-    public static function initAnd($sourceString)
+    public static function initAnd(string $sourceString): Token
     {
         return new self(self::TYPE_AND, $sourceString);
     }
 
-    /**
-     * @param string $sourceString
-     * @return Token
-     */
-    public static function initOr($sourceString)
+    public static function initOr(string $sourceString): Token
     {
         return new self(self::TYPE_OR, $sourceString);
     }
 
-    /**
-     * @param string $sourceString
-     * @return Token
-     */
-    public static function initPlus($sourceString)
+    public static function initPlus(string $sourceString): Token
     {
         return new self(self::TYPE_PLUS, $sourceString);
     }
 
-    /**
-     * @param string $sourceString
-     * @return Token
-     */
-    public static function initMinus($sourceString)
+    public static function initMinus(string $sourceString): Token
     {
         return new self(self::TYPE_MINUS, $sourceString);
     }
 
-    /**
-     * @param string $sourceString
-     * @return Token
-     */
-    public static function initMultiplication($sourceString)
+    public static function initMultiplication(string $sourceString): Token
     {
         return new self(self::TYPE_MULTIPLICATION, $sourceString);
     }
 
-    /**
-     * @param string $sourceString
-     * @return Token
-     */
-    public static function initDivision($sourceString)
+    public static function initDivision(string $sourceString): Token
     {
         return new self(self::TYPE_DIVISION, $sourceString);
     }
 
-    /**
-     * @param string $sourceString
-     * @return Token
-     */
-    public static function initLowPrecedenceNot($sourceString)
+    public static function initLowPrecedenceNot(string $sourceString): Token
     {
         return new self(self::TYPE_LOW_PRECEDENCE_NOT, $sourceString);
     }
 
-    /**
-     * @param string $sourceString
-     * @return Token
-     */
-    public static function initIn($sourceString)
+    public static function initIn(string $sourceString): Token
     {
         return new self(self::TYPE_IN, $sourceString);
     }
 
-    /**
-     * @return Token
-     */
-    public static function initInvalidToken()
+    public static function initSelect(string $sourceString): Token
+    {
+        return new self(self::TYPE_SELECT, $sourceString);
+    }
+
+    public static function initInvalidToken(): Token
     {
         return new self(null, "");
     }
     
-    /*
-     * @return bool
-     */
-    public function isInvalidToken()
+    public function isInvalidToken(): bool
     {
         return null === $this->type;
     }
 
-    /**
-     * @return string
-     */
-    public function dump()
+    public function dump(): string
     {
         if ($this->isInvalidToken()) {
             return "INVALID_TOKEN";
@@ -311,213 +209,140 @@ class Token
         return $dumpString;
     }
     
-    /*
-     * @return bool
-     */
-    public function isWhitespace()
+    public function isWhitespace(): bool
     {
         return self::TYPE_WHITESPACE === $this->type;
     }
     
-    /*
-     * @return bool
-     */
-    public function isIdentifier()
+    public function isIdentifier(): bool
     {
         return self::TYPE_IDENTIFIER === $this->type;
     }
     
-    /*
-     * @return bool
-     */
-    public function isPeriod()
+    public function isPeriod(): bool
     {
         return self::TYPE_PERIOD === $this->type;
     }
     
-    /*
-     * @return bool
-     */
-    public function isNumberLiteral()
+    public function isNumberLiteral(): bool
     {
         return self::TYPE_NUMBER_LITERAL === $this->type;
     }
     
-    /*
-     * @return bool
-     */
-    public function isStringLiteral()
+    public function isStringLiteral(): bool
     {
         return self::TYPE_STRING_LITERAL === $this->type;
     }
     
-    /*
-     * @return bool
-     */
-    public function isEqual()
+    public function isEqual(): bool
     {
         return self::TYPE_EQUAL === $this->type;
     }
     
-    /*
-     * @return bool
-     */
-    public function isNotEqual()
+    public function isNotEqual(): bool
     {
         return self::TYPE_NOT_EQUAL === $this->type;
     }
     
-    /*
-     * @return bool
-     */
-    public function isGreaterThan()
+    public function isGreaterThan(): bool
     {
         return self::TYPE_GREATER_THAN === $this->type;
     }
     
-    /*
-     * @return bool
-     */
-    public function isGreaterThanOrEqual()
+    public function isGreaterThanOrEqual(): bool
     {
         return self::TYPE_GREATER_THAN_OR_EQUAL === $this->type;
     }
     
-    /*
-     * @return bool
-     */
-    public function isLessThan()
+    public function isLessThan(): bool
     {
         return self::TYPE_LESS_THAN === $this->type;
     }
     
-    /*
-     * @return bool
-     */
-    public function isLessThanOrEqual()
+    public function isLessThanOrEqual(): bool
     {
         return self::TYPE_LESS_THAN_OR_EQUAL === $this->type;
     }
-
-    /**
-     * @return bool
-     */
-    public function isComparisonOperator()
+    
+    public function isComparisonOperator(): bool
     {
         return $this->isEqual() || $this->isNotEqual()
             || $this->isGreaterThan() || $this->isGreaterThanOrEqual()
             || $this->isLessThan() || $this->isLessThanOrEqual();
     }
-
-    /**
-     * @return bool
-     */
-    public function isOpeningParenthesis()
+    
+    public function isOpeningParenthesis(): bool
     {
         return self::TYPE_OPENING_PARENTHESIS === $this->type;
     }
-
-    /**
-     * @return bool
-     */
-    public function isClosingParenthesis()
+    
+    public function isClosingParenthesis(): bool
     {
         return self::TYPE_CLOSING_PARENTHESIS === $this->type;
     }
-
-    /**
-     * @return bool
-     */
-    public function isComma()
+    
+    public function isComma(): bool
     {
         return self::TYPE_COMMA === $this->type;
     }
-
-    /**
-     * @return bool
-     */
-    public function isSimplePlaceholder()
+    
+    public function isSimplePlaceholder(): bool
     {
         return self::TYPE_SIMPLE_PLACEHOLDER === $this->type;
     }
-
-    /**
-     * @return bool
-     */
-    public function isNamedPlaceholder()
+    
+    public function isNamedPlaceholder(): bool
     {
         return self::TYPE_NAMED_PLACEHOLDER === $this->type;
     }
-
-    /**
-     * @return bool
-     */
-    public function isAnd()
+    
+    public function isAnd(): bool
     {
         return self::TYPE_AND === $this->type;
     }
-
-    /**
-     * @return bool
-     */
-    public function isOr()
+    
+    public function isOr(): bool
     {
         return self::TYPE_OR === $this->type;
     }
-
-    /**
-     * @return bool
-     */
-    public function isHighPrecedenceNot()
+    
+    public function isHighPrecedenceNot(): bool
     {
         return self::TYPE_HIGH_PRECEDENCE_NOT === $this->type;
     }
-
-    /**
-     * @return bool
-     */
-    public function isPlus()
+    
+    public function isPlus(): bool
     {
         return self::TYPE_PLUS === $this->type;
     }
-
-    /**
-     * @return bool
-     */
-    public function isMinus()
+    
+    public function isMinus(): bool
     {
         return self::TYPE_MINUS === $this->type;
     }
-
-    /**
-     * @return bool
-     */
-    public function isMultiplication()
+    
+    public function isMultiplication(): bool
     {
         return self::TYPE_MULTIPLICATION === $this->type;
     }
-
-    /**
-     * @return bool
-     */
-    public function isDivision()
+    
+    public function isDivision(): bool
     {
         return self::TYPE_DIVISION === $this->type;
     }
-
-    /**
-     * @return bool
-     */
-    public function isLowPrecedenceNot()
+    
+    public function isLowPrecedenceNot(): bool
     {
         return self::TYPE_LOW_PRECEDENCE_NOT === $this->type;
     }
-
-    /**
-     * @return bool
-     */
-    public function isIn()
+    
+    public function isIn(): bool
     {
         return self::TYPE_IN === $this->type;
+    }
+    
+    public function isSelect(): bool
+    {
+        return self::TYPE_SELECT === $this->type;
     }
 }

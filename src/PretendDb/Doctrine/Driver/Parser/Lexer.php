@@ -214,6 +214,10 @@ class Lexer
                 return Token::initIn($tokenSourceString);
             }
             
+            if (0 === strcasecmp($tokenSourceString, "SELECT")) {
+                return Token::initSelect($tokenSourceString);
+            }
+            
             return Token::initIdentifier($tokenSourceString);
         }
         
