@@ -45,6 +45,14 @@ class Token
     protected const TYPE_ASC                                      = "ASC";
     protected const TYPE_DESC                                     = "DESC";
     protected const TYPE_LIMIT                                    = "LIMIT";
+    protected const TYPE_INSERT                                   = "INSERT";
+    protected const TYPE_INTO                                     = "INTO";
+    protected const TYPE_SET                                      = "SET";
+    protected const TYPE_VALUES                                   = "VALUES";
+    protected const TYPE_ON                                       = "ON";
+    protected const TYPE_DUPLICATE                                = "DUPLICATE";
+    protected const TYPE_KEY                                      = "KEY";
+    protected const TYPE_UPDATE                                   = "UPDATE";
     
     /** @var string|null */
     protected $type;
@@ -230,6 +238,46 @@ class Token
     public static function initLimit(string $sourceString): Token
     {
         return new self(self::TYPE_LIMIT, $sourceString);
+    }
+
+    public static function initInsert(string $sourceString): Token
+    {
+        return new self(self::TYPE_INSERT, $sourceString);
+    }
+
+    public static function initInto(string $sourceString): Token
+    {
+        return new self(self::TYPE_INTO, $sourceString);
+    }
+
+    public static function initSetKeyword(string $sourceString): Token
+    {
+        return new self(self::TYPE_SET, $sourceString);
+    }
+
+    public static function initValues(string $sourceString): Token
+    {
+        return new self(self::TYPE_VALUES, $sourceString);
+    }
+
+    public static function initOn(string $sourceString): Token
+    {
+        return new self(self::TYPE_ON, $sourceString);
+    }
+
+    public static function initDuplicate(string $sourceString): Token
+    {
+        return new self(self::TYPE_DUPLICATE, $sourceString);
+    }
+
+    public static function initKey(string $sourceString): Token
+    {
+        return new self(self::TYPE_KEY, $sourceString);
+    }
+
+    public static function initUpdate(string $sourceString): Token
+    {
+        return new self(self::TYPE_UPDATE, $sourceString);
     }
 
     public static function initInvalidToken(): Token
@@ -432,5 +480,45 @@ class Token
     public function isLimit(): bool
     {
         return self::TYPE_LIMIT === $this->type;
+    }
+    
+    public function isInsert(): bool
+    {
+        return self::TYPE_INSERT === $this->type;
+    }
+    
+    public function isInto(): bool
+    {
+        return self::TYPE_INTO === $this->type;
+    }
+    
+    public function isSetKeyword(): bool
+    {
+        return self::TYPE_SET === $this->type;
+    }
+    
+    public function isValues(): bool
+    {
+        return self::TYPE_VALUES === $this->type;
+    }
+    
+    public function isOn(): bool
+    {
+        return self::TYPE_ON === $this->type;
+    }
+    
+    public function isDuplicate(): bool
+    {
+        return self::TYPE_DUPLICATE === $this->type;
+    }
+    
+    public function isKey(): bool
+    {
+        return self::TYPE_KEY === $this->type;
+    }
+    
+    public function isUpdate(): bool
+    {
+        return self::TYPE_UPDATE === $this->type;
     }
 }

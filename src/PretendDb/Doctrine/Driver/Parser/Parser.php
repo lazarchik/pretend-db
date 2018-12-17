@@ -5,6 +5,7 @@ namespace PretendDb\Doctrine\Driver\Parser;
 
 use PretendDb\Doctrine\Driver\Parser\Expression\ExpressionInterface;
 use PretendDb\Doctrine\Driver\Parser\Expression\FunctionCallExpression;
+use PretendDb\Doctrine\Driver\Parser\Expression\InsertQueryExpression;
 use PretendDb\Doctrine\Driver\Parser\Expression\NumberLiteralExpression;
 use PretendDb\Doctrine\Driver\Parser\Expression\SelectExpressionWithOrWithoutAlias;
 use PretendDb\Doctrine\Driver\Parser\Expression\SelectQueryExpression;
@@ -80,11 +81,26 @@ class Parser
         
         if (!$queryTokens->getCurrentToken()->isInvalidToken()) {
             throw new \RuntimeException(
-                "Invalid token after the end of the expression: ".$queryTokens->getCurrentToken()->dump()
+                "Unexpected token after the end of the expression: ".$queryTokens->getCurrentToken()->dump()
             );
         }
         
         return $parsedExpression;
+    }
+    
+    public function parseInsertQuery(string $queryString): InsertQueryExpression
+    {
+        $queryTokens = $this->lexer->parse($queryString);
+        
+        $parsedInsertQuery = $this->parseInsertExpression($queryTokens);
+        
+        if (!$queryTokens->getCurrentToken()->isInvalidToken()) {
+            throw new \RuntimeException(
+                "Unexpected token after the end of the expression: ".$queryTokens->getCurrentToken()->dump()
+            );
+        }
+        
+        return $parsedInsertQuery;
     }
 
     protected function parseSimpleExpressions(TokenSequence $tokens): ExpressionInterface
@@ -381,5 +397,110 @@ class Parser
             $identifierToken2->getSourceString(),
             $identifierToken1->getSourceString()
         );
+    }
+    
+    protected function parseIdentifier(TokenSequence $tokens): string
+    {
+        $identifierToken = $tokens->getCurrentTokenAndAdvanceCursor();
+        
+        if (!$identifierToken->isIdentifier()) {
+            throw new \RuntimeException("Identifier expected, got: ".$identifierToken->dump());
+        }
+        
+        return $identifierToken->getSourceString();
+    }
+
+    protected function parseInsertExpression(TokenSequence $tokens): InsertQueryExpression
+    {
+        $insertToken = $tokens->getCurrentTokenAndAdvanceCursor();
+        
+        if (!$insertToken->isInsert()) {
+            throw new \RuntimeException("INSERT statement should start from INSERT, got: ".$insertToken->dump());
+        }
+        
+        if ($tokens->getCurrentToken()->isInto()) {
+            $tokens->advanceCursor(); // skip optional INTO
+        }
+        
+        $tableName = $this->parseIdentifier($tokens);
+        
+        $fieldNames = [];
+        
+        if ($tokens->getCurrentToken()->isOpeningParenthesis()) {
+            // List of fields follows
+            
+            $tokens->advanceCursor(); // skip opening parenthesis
+            
+            do {
+                $fieldNames[] = $this->parseIdentifier($tokens);
+
+                if (!$tokens->getCurrentToken()->isComma()) {
+                    break;
+                }
+                
+                $tokens->advanceCursor(); // skip comma
+            } while (true);
+            
+            $closingParenthesisToken = $tokens->getCurrentTokenAndAdvanceCursor();
+            if (!$closingParenthesisToken->isClosingParenthesis()) {
+                throw new \RuntimeException(
+                    "Closing parenthesis expected after fields list, got: ".$closingParenthesisToken->dump()
+                );
+            }
+        }
+        
+        $valuesToken = $tokens->getCurrentTokenAndAdvanceCursor();
+        if (!$valuesToken->isValues()) {
+            throw new \RuntimeException("VALUES expected, got: ".$valuesToken->dump());
+        }
+        
+        $openingParenthesisToken = $tokens->getCurrentTokenAndAdvanceCursor();
+        if (!$openingParenthesisToken->isOpeningParenthesis()) {
+            throw new \RuntimeException(
+                "Opening parenthesis expected after VALUES, got: ".$openingParenthesisToken->dump()
+            );
+        }
+        
+        $valuesLists = [];
+        do {
+            $valuesLists[] = $this->parseValuesList($tokens);
+            
+            if (!$tokens->getCurrentToken()->isComma()) {
+                break;
+            }
+            
+            $tokens->advanceCursor(); // skip comma
+        } while (true);
+        
+        return new InsertQueryExpression($tableName, $fieldNames, $valuesLists);
+    }
+
+    /**
+     * @param TokenSequence $tokens
+     * @return ExpressionInterface[]
+     */
+    protected function parseValuesList(TokenSequence $tokens): array
+    {
+        $valuesExpressions = [];
+        
+        do {
+            $valuesExpressions[] = $this->parseExpression($tokens, 0);
+            
+            if (!$tokens->getCurrentToken()->isComma()) {
+                break;
+            }
+            
+            $tokens->advanceCursor(); // skip comma
+        } while (true);
+        
+        
+        $closingParenthesisToken = $tokens->getCurrentTokenAndAdvanceCursor();
+        if (!$closingParenthesisToken->isClosingParenthesis()) {
+            throw new \RuntimeException(
+                "Closing parenthesis expected, got: ".$closingParenthesisToken->dump()
+            );
+        }
+        
+        return $valuesExpressions;
     }
 }

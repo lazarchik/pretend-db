@@ -209,6 +209,15 @@ class Lexer
                 case "ASC": return Token::initAsc($tokenSourceString);
                 case "DESC": return Token::initDesc($tokenSourceString);
                 case "LIMIT": return Token::initLimit($tokenSourceString);
+                case "INSERT": return Token::initInsert($tokenSourceString);
+                case "INTO": return Token::initInto($tokenSourceString);
+                case "SET": return Token::initSetKeyword($tokenSourceString);
+                case "VALUE": return Token::initValues($tokenSourceString);
+                case "VALUES": return Token::initValues($tokenSourceString);
+                case "ON": return Token::initOn($tokenSourceString);
+                case "DUPLICATE": return Token::initDuplicate($tokenSourceString);
+                case "KEY": return Token::initKey($tokenSourceString);
+                case "UPDATE": return Token::initUpdate($tokenSourceString);
                 default: return Token::initIdentifier($tokenSourceString);
             }
         }
