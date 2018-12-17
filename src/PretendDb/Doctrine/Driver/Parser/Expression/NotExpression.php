@@ -3,29 +3,24 @@
 namespace PretendDb\Doctrine\Driver\Parser\Expression;
 
 
+use PretendDb\Doctrine\Driver\Expression\EvaluationContext;
+
 class NotExpression implements ExpressionInterface
 {
     /** @var ExpressionInterface */
     protected $operand;
 
-    /**
-     * @param ExpressionInterface $operand
-     */
-    public function __construct($operand)
+    public function __construct(ExpressionInterface $operand)
     {
         $this->operand = $operand;
     }
 
-    public function evaluate($evaluationContext)
+    public function evaluate(EvaluationContext $evaluationContext)
     {
         return !$this->operand->evaluate($evaluationContext);
     }
 
-    /**
-     * @param string $indentationString
-     * @return string
-     */
-    public function dump($indentationString = "")
+    public function dump(string $indentationString = ""): string
     {
         return "NOT\n" . $indentationString . "┗━━ " . $this->operand->dump($indentationString . "    ");
     }

@@ -37,14 +37,22 @@ class Token
     protected const TYPE_IDENTIFIER                               = "IDENTIFIER";
     protected const TYPE_IN                                       = "IN";
     protected const TYPE_SELECT                                   = "SELECT";
+    protected const TYPE_AS                                       = "AS";
+    protected const TYPE_FROM                                     = "FROM";
+    protected const TYPE_WHERE                                    = "WHERE";
+    protected const TYPE_ORDER                                    = "ORDER";
+    protected const TYPE_BY                                       = "BY";
+    protected const TYPE_ASC                                      = "ASC";
+    protected const TYPE_DESC                                     = "DESC";
+    protected const TYPE_LIMIT                                    = "LIMIT";
     
-    /** @var int|null */
+    /** @var string|null */
     protected $type;
     
     /** @var string */
     private $sourceString;
 
-    protected function __construct(int $type, string $sourceString)
+    protected function __construct(?string $type, string $sourceString)
     {
         $this->type = $type;
         $this->sourceString = $sourceString;
@@ -182,6 +190,46 @@ class Token
     public static function initSelect(string $sourceString): Token
     {
         return new self(self::TYPE_SELECT, $sourceString);
+    }
+
+    public static function initAs(string $sourceString): Token
+    {
+        return new self(self::TYPE_AS, $sourceString);
+    }
+
+    public static function initFrom(string $sourceString): Token
+    {
+        return new self(self::TYPE_FROM, $sourceString);
+    }
+
+    public static function initWhere(string $sourceString): Token
+    {
+        return new self(self::TYPE_WHERE, $sourceString);
+    }
+
+    public static function initOrder(string $sourceString): Token
+    {
+        return new self(self::TYPE_ORDER, $sourceString);
+    }
+
+    public static function initBy(string $sourceString): Token
+    {
+        return new self(self::TYPE_BY, $sourceString);
+    }
+
+    public static function initAsc(string $sourceString): Token
+    {
+        return new self(self::TYPE_ASC, $sourceString);
+    }
+
+    public static function initDesc(string $sourceString): Token
+    {
+        return new self(self::TYPE_DESC, $sourceString);
+    }
+
+    public static function initLimit(string $sourceString): Token
+    {
+        return new self(self::TYPE_LIMIT, $sourceString);
     }
 
     public static function initInvalidToken(): Token
@@ -344,5 +392,45 @@ class Token
     public function isSelect(): bool
     {
         return self::TYPE_SELECT === $this->type;
+    }
+    
+    public function isAs(): bool
+    {
+        return self::TYPE_AS === $this->type;
+    }
+    
+    public function isFrom(): bool
+    {
+        return self::TYPE_FROM === $this->type;
+    }
+    
+    public function isWhere(): bool
+    {
+        return self::TYPE_WHERE === $this->type;
+    }
+    
+    public function isOrder(): bool
+    {
+        return self::TYPE_ORDER === $this->type;
+    }
+    
+    public function isBy(): bool
+    {
+        return self::TYPE_BY === $this->type;
+    }
+    
+    public function isAsc(): bool
+    {
+        return self::TYPE_ASC === $this->type;
+    }
+    
+    public function isDesc(): bool
+    {
+        return self::TYPE_DESC === $this->type;
+    }
+    
+    public function isLimit(): bool
+    {
+        return self::TYPE_LIMIT === $this->type;
     }
 }

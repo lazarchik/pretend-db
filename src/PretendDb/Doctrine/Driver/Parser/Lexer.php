@@ -48,7 +48,7 @@ class Lexer
         /** @var string[] */
         $stringLiterals = [];
         
-        while (strlen($queryString) > 0) {
+        while ('' !== $queryString) {
             
             $nextToken = $this->parseNextToken($queryString);
             
@@ -72,7 +72,6 @@ class Lexer
             }
             
             if ($stringLiterals) {
-                
                 $tokens->addToken(Token::initStringLiteral(implode($stringLiterals)));
                 
                 $stringLiterals = [];
@@ -84,7 +83,6 @@ class Lexer
         }
         
         if ($stringLiterals) {
-            
             $tokens->addToken(Token::initStringLiteral(implode($stringLiterals)));
         }
         
@@ -197,28 +195,22 @@ class Lexer
         }
         
         if (null !== ($tokenSourceString = $this->checkTokenRegex($queryString, "[a-z\$_][a-z0-9\$_]+"))) {
-            
-            if (0 === strcasecmp($tokenSourceString, "OR")) {
-                return Token::initOr($tokenSourceString);
+            switch (strtoupper($tokenSourceString)) {
+                case "OR": return Token::initOr($tokenSourceString);
+                case "AND": return Token::initAnd($tokenSourceString);
+                case "NOT": return Token::initLowPrecedenceNot($tokenSourceString);
+                case "IN": return Token::initIn($tokenSourceString);
+                case "SELECT": return Token::initSelect($tokenSourceString);
+                case "AS": return Token::initAs($tokenSourceString);
+                case "FROM": return Token::initFrom($tokenSourceString);
+                case "WHERE": return Token::initWhere($tokenSourceString);
+                case "ORDER": return Token::initOrder($tokenSourceString);
+                case "BY": return Token::initBy($tokenSourceString);
+                case "ASC": return Token::initAsc($tokenSourceString);
+                case "DESC": return Token::initDesc($tokenSourceString);
+                case "LIMIT": return Token::initLimit($tokenSourceString);
+                default: return Token::initIdentifier($tokenSourceString);
             }
-            
-            if (0 === strcasecmp($tokenSourceString, "AND")) {
-                return Token::initAnd($tokenSourceString);
-            }
-            
-            if (0 === strcasecmp($tokenSourceString, "NOT")) {
-                return Token::initLowPrecedenceNot($tokenSourceString);
-            }
-            
-            if (0 === strcasecmp($tokenSourceString, "IN")) {
-                return Token::initIn($tokenSourceString);
-            }
-            
-            if (0 === strcasecmp($tokenSourceString, "SELECT")) {
-                return Token::initSelect($tokenSourceString);
-            }
-            
-            return Token::initIdentifier($tokenSourceString);
         }
         
         if (null !== (

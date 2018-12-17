@@ -3,6 +3,8 @@
 namespace PretendDb\Doctrine\Driver\Parser\Expression;
 
 
+use PretendDb\Doctrine\Driver\Expression\EvaluationContext;
+
 class FunctionCallExpression implements ExpressionInterface
 {
     /** @var string */
@@ -11,17 +13,13 @@ class FunctionCallExpression implements ExpressionInterface
     /** @var ExpressionInterface[] */
     protected $arguments;
 
-    /**
-     * @param string $functionName
-     * @param ExpressionInterface[]$arguments
-     */
-    public function __construct($functionName, $arguments)
+    public function __construct(string $functionName, array $arguments)
     {
         $this->functionName = $functionName;
         $this->arguments = $arguments;
     }
     
-    public function evaluate($evaluationContext)
+    public function evaluate(EvaluationContext $evaluationContext)
     {
         // TODO: Implement evaluate() method.
         //throw new \RuntimeException("Method not implemented");
@@ -29,11 +27,7 @@ class FunctionCallExpression implements ExpressionInterface
         return 1;
     }
 
-    /**
-     * @param string $indentationString
-     * @return string
-     */
-    public function dump($indentationString = "")
+    public function dump(string $indentationString = ""): string
     {
         $argumentDumps = [];
         foreach ($this->arguments as $argument) {

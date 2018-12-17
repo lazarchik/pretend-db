@@ -3,29 +3,24 @@
 namespace PretendDb\Doctrine\Driver\Parser\Expression;
 
 
+use PretendDb\Doctrine\Driver\Expression\EvaluationContext;
+
 class StringLiteralExpression implements ExpressionInterface
 {
     /** @var string */
     protected $value;
 
-    /**
-     * @param string $value
-     */
-    public function __construct($value)
+    public function __construct(string $value)
     {
         $this->value = $value;
     }
 
-    public function evaluate($evaluationContext)
+    public function evaluate(EvaluationContext $evaluationContext)
     {
         return $this->value;
     }
 
-    /**
-     * @param string $indentationString
-     * @return string
-     */
-    public function dump($indentationString = "")
+    public function dump(string $indentationString = ""): string
     {
         return (string) $this->value;
     }

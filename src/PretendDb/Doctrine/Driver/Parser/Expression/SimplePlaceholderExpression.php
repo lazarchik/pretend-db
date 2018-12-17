@@ -3,9 +3,11 @@
 namespace PretendDb\Doctrine\Driver\Parser\Expression;
 
 
+use PretendDb\Doctrine\Driver\Expression\EvaluationContext;
+
 class SimplePlaceholderExpression implements ExpressionInterface
 {
-    public function evaluate($evaluationContext)
+    public function evaluate(EvaluationContext $evaluationContext)
     {
         return $evaluationContext->extractOneBoundParam();
     }
@@ -14,7 +16,7 @@ class SimplePlaceholderExpression implements ExpressionInterface
      * @param string $indentationString
      * @return string
      */
-    public function dump($indentationString = "")
+    public function dump(string $indentationString = ""): string
     {
         return "?";
     }

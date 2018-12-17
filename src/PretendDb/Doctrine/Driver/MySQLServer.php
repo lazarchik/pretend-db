@@ -440,6 +440,10 @@ class MySQLServer
         
         $values = $insertStatement->values;
         
+        if (!is_array($values)) {
+            throw new \RuntimeException("Values are missing for INSERT statement: ".var_export($insertStatement, true));
+        }
+        
         $queryResultObject = new MySQLQueryResult();
         $queryResultObject->setAffectedRowsCount(count($values));
         

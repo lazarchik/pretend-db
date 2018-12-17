@@ -5,34 +5,34 @@ namespace PretendDb\Doctrine\Driver\Parser\Expression;
 
 use PretendDb\Doctrine\Driver\Expression\EvaluationContext;
 
-class TableFieldExpression implements ExpressionInterface
+class TableExpression implements ExpressionInterface
 {
     /** @var string|null */
     protected $databaseName;
     
-    /** @var string|null */
+    /** @var string */
     protected $tableName;
     
-    /** @var string */
-    protected $fieldName;
+    /** @var string|null */
+    protected $alias;
 
-    public function __construct(string $fieldName, ?string $tableName, ?string $databaseName)
+    public function __construct(string $tableName, ?string $databaseName, ?string $alias)
     {
-        $this->fieldName = $fieldName;
         $this->tableName = $tableName;
         $this->databaseName = $databaseName;
+        $this->alias = $alias;
     }
 
     public function evaluate(EvaluationContext $evaluationContext)
     {
-        return $evaluationContext->getFieldValue($this->fieldName, $this->tableName, $this->databaseName);
+        throw new \RuntimeException("Not implemented yet");
     }
 
     public function dump(string $indentationString = ""): string
     {
         return
             (null === $this->databaseName ? "" : $this->databaseName.".")
-            .(null === $this->tableName ? "" : $this->tableName.".")
-            .$this->fieldName;
+            .$this->tableName
+            .(null === $this->alias ? "" : " AS ".$this->alias);
     }
 }

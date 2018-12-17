@@ -11,12 +11,7 @@ interface ExpressionInterface
      * @param EvaluationContext $evaluationContext
      * @return mixed
      */
-    public function evaluate($evaluationContext);
+    public function evaluate(EvaluationContext $evaluationContext);
 
-    /**
-     * @param string $indentationString
-     * @return string
-     * @internal param int $indentationLevels
-     */
-    public function dump($indentationString = "");
+    public function dump(string $indentationString = ""): string;
 }

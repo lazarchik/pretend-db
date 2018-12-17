@@ -13,9 +13,6 @@ class TokenSequence
     /** @var int */
     protected $currentTokenIndex = 0;
 
-    /**
-     * @param Token $token
-     */
     public function addToken(Token $token)
     {
         $this->tokens[] = $token;
@@ -24,7 +21,7 @@ class TokenSequence
     /**
      * @return Token Current token if it's available. Otherwise an invalid token.
      */
-    public function getCurrentToken()
+    public function getCurrentToken(): Token
     {
         if (!array_key_exists($this->currentTokenIndex, $this->tokens)) {
             return Token::initInvalidToken();
@@ -37,7 +34,7 @@ class TokenSequence
      * Looks ahead without advancing the cursor
      * @return Token Next token if it's available. Otherwise an invalid token.
      */
-    public function getNextToken()
+    public function getNextToken(): Token
     {
         $nextTokenIndex = $this->currentTokenIndex + 1;
         
@@ -48,10 +45,7 @@ class TokenSequence
         return $this->tokens[$nextTokenIndex];
     }
 
-    /**
-     * @return Token
-     */
-    public function getCurrentTokenAndAdvanceCursor()
+    public function getCurrentTokenAndAdvanceCursor(): Token
     {
         $currentToken = $this->getCurrentToken();
         
@@ -60,15 +54,12 @@ class TokenSequence
         return $currentToken;
     }
     
-    public function advanceCursor()
+    public function advanceCursor(): void
     {
         $this->currentTokenIndex++;
     }
 
-    /**
-     * @return string
-     */
-    public function dump()
+    public function dump(): string
     {
         $tokenDumps = [];
         foreach ($this->tokens as $token) {
@@ -76,5 +67,15 @@ class TokenSequence
         }
         
         return "[".implode(", ", $tokenDumps)."]";
+    }
+
+    public function getSourceText(): string
+    {
+        $sourceText = "";
+        foreach ($this->tokens as $token) {
+            $sourceText .= $token->getSourceString();
+        }
+        
+        return $sourceText;
     }
 }

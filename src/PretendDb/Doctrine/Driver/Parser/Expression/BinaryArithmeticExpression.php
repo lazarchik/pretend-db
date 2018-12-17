@@ -3,6 +3,8 @@
 namespace PretendDb\Doctrine\Driver\Parser\Expression;
 
 
+use PretendDb\Doctrine\Driver\Expression\EvaluationContext;
+
 class BinaryArithmeticExpression implements ExpressionInterface
 {
     /** @var string */
@@ -14,19 +16,17 @@ class BinaryArithmeticExpression implements ExpressionInterface
     /** @var ExpressionInterface */
     protected $rightExpression;
 
-    /**
-     * @param string $operatorType
-     * @param ExpressionInterface $leftExpression
-     * @param ExpressionInterface $rightExpression
-     */
-    public function __construct($operatorType, $leftExpression, $rightExpression)
-    {
+    public function __construct(
+        string $operatorType,
+        ExpressionInterface $leftExpression,
+        ExpressionInterface $rightExpression
+    ) {
         $this->operatorType = $operatorType;
         $this->leftExpression = $leftExpression;
         $this->rightExpression = $rightExpression;
     }
 
-    public function evaluate($evaluationContext)
+    public function evaluate(EvaluationContext $evaluationContext)
     {
         $leftExpressionResult = $this->leftExpression->evaluate($evaluationContext);
         $rightExpressionResult = $this->rightExpression->evaluate($evaluationContext);
@@ -41,11 +41,7 @@ class BinaryArithmeticExpression implements ExpressionInterface
         }
     }
 
-    /**
-     * @param int|string $indentationString
-     * @return string
-     */
-    public function dump($indentationString = "")
+    public function dump(string $indentationString = ""): string
     {
         return $this->operatorType."\n"
             .$indentationString."┣━━ ".$this->leftExpression->dump($indentationString."┃   ")."\n"
