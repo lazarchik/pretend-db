@@ -420,6 +420,8 @@ class MySQLServer
         
         $tableName = $insertQueryAST->getTableName();
         
+        /** @FIXME: add support for INSERT IGNORE. And in general, check if row already exists */
+        
         $valueLists = $insertQueryAST->evaluate($evaluationContext);
         
         $queryResultObject = new MySQLQueryResult();

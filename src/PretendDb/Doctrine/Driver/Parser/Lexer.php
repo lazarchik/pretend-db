@@ -208,6 +208,7 @@ class Lexer
                 case "DESC": return Token::initDesc($tokenSourceString);
                 case "LIMIT": return Token::initLimit($tokenSourceString);
                 case "INSERT": return Token::initInsert($tokenSourceString);
+                case "IGNORE": return Token::initIgnore($tokenSourceString);
                 case "INTO": return Token::initInto($tokenSourceString);
                 case "SET": return Token::initSetKeyword($tokenSourceString);
                 case "VALUE": return Token::initValues($tokenSourceString);

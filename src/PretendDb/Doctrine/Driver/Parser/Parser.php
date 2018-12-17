@@ -421,10 +421,17 @@ class Parser
 
     protected function parseInsertExpression(TokenSequence $tokens): InsertQueryExpression
     {
+        $isIgnore = false;
+        
         $insertToken = $tokens->getCurrentTokenAndAdvanceCursor();
         
         if (!$insertToken->isInsert()) {
             throw new \RuntimeException("INSERT statement should start from INSERT, got: ".$insertToken->dump());
+        }
+        
+        if ($tokens->getCurrentToken()->isIgnore()) {
+            $tokens->advanceCursor(); // skip optional IGNORE
+            $isIgnore = true;
         }
         
         if ($tokens->getCurrentToken()->isInto()) {
@@ -463,13 +470,6 @@ class Parser
             throw new \RuntimeException("VALUES expected, got: ".$valuesToken->dump());
         }
         
-        $openingParenthesisToken = $tokens->getCurrentTokenAndAdvanceCursor();
-        if (!$openingParenthesisToken->isOpeningParenthesis()) {
-            throw new \RuntimeException(
-                "Opening parenthesis expected after VALUES, got: ".$openingParenthesisToken->dump()
-            );
-        }
-        
         $valuesLists = [];
         do {
             $valuesLists[] = $this->parseValuesList($tokens);
@@ -481,7 +481,7 @@ class Parser
             $tokens->advanceCursor(); // skip comma
         } while (true);
         
-        return new InsertQueryExpression($tableName, $fieldNames, $valuesLists);
+        return new InsertQueryExpression($tableName, $fieldNames, $valuesLists, $isIgnore);
     }
 
     /**
@@ -491,6 +491,13 @@ class Parser
     protected function parseValuesList(TokenSequence $tokens): array
     {
         $valuesExpressions = [];
+        
+        $openingParenthesisToken = $tokens->getCurrentTokenAndAdvanceCursor();
+        if (!$openingParenthesisToken->isOpeningParenthesis()) {
+            throw new \RuntimeException(
+                "Opening parenthesis expected after VALUES, got: ".$openingParenthesisToken->dump()
+            );
+        }
         
         do {
             $valuesExpressions[] = $this->parseExpression($tokens, 0);

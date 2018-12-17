@@ -14,17 +14,21 @@ class InsertQueryExpression implements ExpressionInterface
     
     /** @var ExpressionInterface[][] */
     protected $valuesLists;
+    
+    /** @var bool */
+    protected $isIgnore;
 
     /**
      * @param string $tableName
      * @param string[] $fieldNames
      * @param ExpressionInterface[][] $valuesLists
      */
-    public function __construct(string $tableName, array $fieldNames, array $valuesLists)
+    public function __construct(string $tableName, array $fieldNames, array $valuesLists, bool $isIgnore)
     {
         $this->tableName = $tableName;
         $this->fieldNames = $fieldNames;
         $this->valuesLists = $valuesLists;
+        $this->isIgnore = $isIgnore;
     }
     
     /**
@@ -81,5 +85,10 @@ class InsertQueryExpression implements ExpressionInterface
     public function getFieldNames(): array
     {
         return $this->fieldNames;
+    }
+
+    public function getIsIgnore(): bool
+    {
+        return $this->isIgnore;
     }
 }

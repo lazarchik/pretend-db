@@ -46,6 +46,7 @@ class Token
     protected const TYPE_DESC                                     = "DESC";
     protected const TYPE_LIMIT                                    = "LIMIT";
     protected const TYPE_INSERT                                   = "INSERT";
+    protected const TYPE_IGNORE                                   = "IGNORE";
     protected const TYPE_INTO                                     = "INTO";
     protected const TYPE_SET                                      = "SET";
     protected const TYPE_VALUES                                   = "VALUES";
@@ -243,6 +244,11 @@ class Token
     public static function initInsert(string $sourceString): Token
     {
         return new self(self::TYPE_INSERT, $sourceString);
+    }
+
+    public static function initIgnore(string $sourceString): Token
+    {
+        return new self(self::TYPE_IGNORE, $sourceString);
     }
 
     public static function initInto(string $sourceString): Token
@@ -485,6 +491,11 @@ class Token
     public function isInsert(): bool
     {
         return self::TYPE_INSERT === $this->type;
+    }
+    
+    public function isIgnore(): bool
+    {
+        return self::TYPE_IGNORE === $this->type;
     }
     
     public function isInto(): bool
