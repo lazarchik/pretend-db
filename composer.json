@@ -1,10 +1,11 @@
 {
-  "name": "lzr/pretend-db",
+  "name": "lzref/pretend-db",
   "description": "A Doctrine driver that emulates basic MySQL functionality. Can be used to speed up automated tests.",
   "require": {
     "doctrine/dbal": ">=2.5-dev,<2.7-dev",
     "phpunit/phpunit": "~6.2",
-    "phpmyadmin/sql-parser": "^4.1"
+    "phpmyadmin/sql-parser": "^4.1",
+    "facile-it/doctrine-mysql-come-back": "~1.6"
   },
   "require-dev": {
     "doctrine/orm": "2.5.*"
