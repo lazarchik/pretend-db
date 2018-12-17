@@ -122,7 +122,7 @@ class MySQLServer
             }
             
         } catch (\Exception $e) {
-            throw new \RuntimeException("Can't execute query: ".$queryString, 0, $e);
+            throw new \RuntimeException("Can't execute query: ".$queryString.", ".$e->getMessage(), 0, $e);
         }
         
         throw new \RuntimeException("Only SELECT and INSERT statements are currently supported. Got: " . $queryString

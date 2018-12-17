@@ -5,7 +5,8 @@
     "doctrine/dbal": ">=2.5-dev,<2.7-dev",
     "phpunit/phpunit": "~6.2",
     "phpmyadmin/sql-parser": "^4.1",
-    "facile-it/doctrine-mysql-come-back": "~1.6"
+    "facile-it/doctrine-mysql-come-back": "~1.6",
+    "ext-pdo": "*"
   },
   "require-dev": {
     "doctrine/orm": "2.5.*"

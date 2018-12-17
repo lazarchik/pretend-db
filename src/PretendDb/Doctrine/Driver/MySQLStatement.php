@@ -101,13 +101,12 @@ class MySQLStatement implements \IteratorAggregate, Statement
      *                                The value must be one of the PDO::FETCH_* constants,
      *                                defaulting to PDO::FETCH_BOTH.
      *
+     * @param int $cursorOrientation
+     * @param int $cursorOffset
      * @return mixed The return value of this method on success depends on the fetch mode. In all cases, FALSE is
-     * @throws \InvalidArgumentException
-     *               returned on failure.
-     *
      * @see PDO::FETCH_* constants.
      */
-    public function fetch($fetchMode = null)
+    public function fetch($fetchMode = null, $cursorOrientation = \PDO::FETCH_ORI_NEXT, $cursorOffset = 0)
     {
         if (null === $fetchMode) {
             $fetchMode = \PDO::FETCH_BOTH;
@@ -148,12 +147,19 @@ class MySQLStatement implements \IteratorAggregate, Statement
      *                                The value must be one of the PDO::FETCH_* constants,
      *                                defaulting to PDO::FETCH_BOTH.
      *
+     * @param int|null $fetchArgument This argument has a different meaning depending on the value of the $fetchMode parameter:
+     *                                * \PDO::FETCH_COLUMN: Returns the indicated 0-indexed column.
+     *                                * \PDO::FETCH_CLASS: Returns instances of the specified class, mapping the columns of each
+     *                                  row to named properties in the class.
+     *                                * \PDO::FETCH_FUNC: Returns the results of calling the specified function, using each row's
+     *                                  columns as parameters in the call.
+     * @param array|null $ctorArgs    Controls how the next row will be returned to the caller.
+     *                                The value must be one of the \PDO::FETCH_* constants,
+     *                                defaulting to \PDO::FETCH_BOTH.
      * @return array
-     * @throws \InvalidArgumentException
-     *
      * @see PDO::FETCH_* constants.
      */
-    public function fetchAll($fetchMode = null)
+    public function fetchAll($fetchMode = null, $fetchArgument = null, $ctorArgs = null)
     {
         if (null === $fetchMode) {
             $fetchMode = \PDO::FETCH_BOTH;
