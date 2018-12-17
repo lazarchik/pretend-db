@@ -303,6 +303,10 @@ class MySQLStatement implements \IteratorAggregate, Statement
         
         $queryResult = $this->server->executeQuery($this->queryString, $this->boundParams, $this->connection);
         
+        if (!$queryResult) {
+            throw new \RuntimeException("Empty query result detected: ".$this->queryString);
+        }
+        
         $this->queryResultsTable = $queryResult->getQueryResultsTable();
         $this->errorCodeNumber = $queryResult->getErrorCode();
         $this->affectedRowsCount = $queryResult->getAffectedRowsCount();

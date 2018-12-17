@@ -128,7 +128,7 @@ class MySQLServer
             }
             
         } catch (\Exception $e) {
-            throw new \RuntimeException("Can't execute query: ".$queryString.", ".$e->getMessage(), 0, $e);
+            throw new \RuntimeException("Can't execute query: ".$queryString."\n\nMessage:\n".$e->getMessage(), 0, $e);
         }
         
         throw new \RuntimeException(
@@ -580,9 +580,13 @@ class MySQLServer
      * @param AlterStatement $parsedStatement
      * @param array $boundParams
      * @param MySQLConnection $connection
+     * @return MySQLQueryResult
      */
-    protected function executeAlter($parsedStatement, $boundParams, $connection)
-    {
+    protected function executeAlter(
+        AlterStatement $parsedStatement,
+        array $boundParams,
+        MySQLConnection $connection
+    ): MySQLQueryResult {
         $databaseName = $parsedStatement->table->database;
         $tableName = $parsedStatement->table->table;
         
@@ -603,6 +607,8 @@ class MySQLServer
                 $parsedAddPartitionStatement->partitionValue
             );
         }
+        
+        return new MySQLQueryResult();
     }
 
     /**
