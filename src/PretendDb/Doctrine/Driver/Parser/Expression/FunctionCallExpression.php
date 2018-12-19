@@ -22,10 +22,7 @@ class FunctionCallExpression extends AbstractExpression
     
     public function evaluate(EvaluationContext $evaluationContext)
     {
-        // TODO: Implement evaluate() method.
-        //throw new \RuntimeException("Method not implemented");
-        
-        return 1;
+        throw new \RuntimeException("Method not implemented");
     }
 
     public function dump(string $indentationString = ""): string
