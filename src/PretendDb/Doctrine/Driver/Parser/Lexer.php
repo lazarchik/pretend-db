@@ -194,6 +194,7 @@ class Lexer
         
         if (null !== ($tokenSourceString = $this->checkTokenRegex($queryString, "[a-z\$_][a-z0-9\$_]+"))) {
             switch (strtoupper($tokenSourceString)) {
+                case "NULL": return Token::initNullLiteral($tokenSourceString);
                 case "OR": return Token::initOr($tokenSourceString);
                 case "AND": return Token::initAnd($tokenSourceString);
                 case "NOT": return Token::initLowPrecedenceNot($tokenSourceString);

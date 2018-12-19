@@ -86,6 +86,11 @@ class Token
     {
         return new self(self::TYPE_NUMBER_LITERAL, $sourceString);
     }
+    
+    public static function initNullLiteral(string $sourceString): Token
+    {
+        return new self(self::TYPE_NULL_LITERAL, $sourceString);
+    }
 
     /**
      * @param string $tokenSourceString
@@ -329,6 +334,11 @@ class Token
     public function isNumberLiteral(): bool
     {
         return self::TYPE_NUMBER_LITERAL === $this->type;
+    }
+    
+    public function isNullLiteral(): bool
+    {
+        return self::TYPE_NULL_LITERAL === $this->type;
     }
     
     public function isStringLiteral(): bool

@@ -6,6 +6,7 @@ namespace PretendDb\Doctrine\Driver\Parser;
 use PretendDb\Doctrine\Driver\Parser\Expression\ExpressionInterface;
 use PretendDb\Doctrine\Driver\Parser\Expression\FunctionCallExpression;
 use PretendDb\Doctrine\Driver\Parser\Expression\InsertQueryExpression;
+use PretendDb\Doctrine\Driver\Parser\Expression\NullLiteralExpression;
 use PretendDb\Doctrine\Driver\Parser\Expression\NumberLiteralExpression;
 use PretendDb\Doctrine\Driver\Parser\Expression\SelectExpressionWithOrWithoutAlias;
 use PretendDb\Doctrine\Driver\Parser\Expression\SelectQueryExpression;
@@ -50,7 +51,7 @@ class Parser
             
             $leftOperand = $unaryOperator->initAST($sourceString, [$operand]);
         } else {
-            $leftOperand = $this->parseSimpleExpressions($tokens);
+            $leftOperand = $this->parseSimpleExpression($tokens);
         }
         
         $binaryOperator = $this->grammar->findBinaryOperatorFromToken($tokens->getCurrentToken());
@@ -126,9 +127,15 @@ class Parser
         }
     }
 
-    protected function parseSimpleExpressions(TokenSequence $tokens): ExpressionInterface
+    protected function parseSimpleExpression(TokenSequence $tokens): ExpressionInterface
     {
         $currentToken = $tokens->getCurrentToken();
+        
+        if ($currentToken->isNullLiteral()) {
+            $token = $tokens->getCurrentTokenAndAdvanceCursor(); // skip the NULL literal
+            
+            return new NullLiteralExpression($token->getSourceString());
+        }
         
         if ($currentToken->isIdentifier()) {
             
