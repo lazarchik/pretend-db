@@ -117,7 +117,7 @@ class MySQLTable
     public function findRowsSatisfyingAnExpression(
         ExpressionInterface $expressionAST,
         EvaluationContext $evaluationContext,
-        string $databaseName,
+        ?string $databaseName,
         string $tableNameOrAlias
     ): array {
         $foundRows = [];

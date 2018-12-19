@@ -324,40 +324,50 @@ class Parser
                 .$functionNameToken->dump());
         }
         
+        $functionArguments = $this->parseExpressionListInParentheses($tokens);
+        
+        return new FunctionCallExpression($functionNameToken->getSourceString(), $functionArguments);
+    }
+
+    /**
+     * @param TokenSequence $tokens
+     * @return ExpressionInterface[]
+     */
+    protected function parseExpressionListInParentheses(TokenSequence $tokens): array
+    {
         $openingParenthesisToken = $tokens->getCurrentTokenAndAdvanceCursor();
         
         if (!$openingParenthesisToken->isOpeningParenthesis()) {
             throw new \RuntimeException(
-                "Second token of a function call expression must be an opening parenthesis. Got: "
-                    .$openingParenthesisToken->dump()
+                "Expected opening parenthesis. Got: ".$openingParenthesisToken->dump()
             );
         }
         
         if ($tokens->getCurrentToken()->isClosingParenthesis()) {
-            return new FunctionCallExpression($functionNameToken->getSourceString(), []);
+            return [];
         }
         
-        $functionArguments = [];
+        $expressions = [];
         
-        $functionArguments[] = $this->parseExpression($tokens, 0);
+        do {
+            $expressions[] = $this->parseExpression($tokens, 0);
         
-        while ($tokens->getCurrentToken()->isComma()) {
+            if (!$tokens->getCurrentToken()->isComma()) {
+                break;
+            }
             
             $tokens->advanceCursor(); // Skip the comma.
-            
-            $functionArguments[] = $this->parseExpression($tokens, 0);
-        }
+        } while (true);
         
         $closingParenthesisToken = $tokens->getCurrentTokenAndAdvanceCursor();
         
         if (!$closingParenthesisToken->isClosingParenthesis()) {
             throw new \RuntimeException(
-                "A comma or a closing parenthesis are expected after a function argument. Got: "
-                    .$closingParenthesisToken->dump()
+                "A comma or a closing parenthesis expected. Got: ".$closingParenthesisToken->dump()
             );
         }
         
-        return new FunctionCallExpression($functionNameToken->getSourceString(), $functionArguments);
+        return $expressions;
     }
 
     protected function parseTableField(TokenSequence $tokens): TableFieldExpression
@@ -472,7 +482,7 @@ class Parser
         
         $valuesLists = [];
         do {
-            $valuesLists[] = $this->parseValuesList($tokens);
+            $valuesLists[] = $this->parseExpressionListInParentheses($tokens);
             
             if (!$tokens->getCurrentToken()->isComma()) {
                 break;
@@ -482,41 +492,5 @@ class Parser
         } while (true);
         
         return new InsertQueryExpression($tableName, $fieldNames, $valuesLists, $isIgnore);
-    }
-
-    /**
-     * @param TokenSequence $tokens
-     * @return ExpressionInterface[]
-     */
-    protected function parseValuesList(TokenSequence $tokens): array
-    {
-        $valuesExpressions = [];
-        
-        $openingParenthesisToken = $tokens->getCurrentTokenAndAdvanceCursor();
-        if (!$openingParenthesisToken->isOpeningParenthesis()) {
-            throw new \RuntimeException(
-                "Opening parenthesis expected after VALUES, got: ".$openingParenthesisToken->dump()
-            );
-        }
-        
-        do {
-            $valuesExpressions[] = $this->parseExpression($tokens, 0);
-            
-            if (!$tokens->getCurrentToken()->isComma()) {
-                break;
-            }
-            
-            $tokens->advanceCursor(); // skip comma
-        } while (true);
-        
-        
-        $closingParenthesisToken = $tokens->getCurrentTokenAndAdvanceCursor();
-        if (!$closingParenthesisToken->isClosingParenthesis()) {
-            throw new \RuntimeException(
-                "Closing parenthesis expected, got: ".$closingParenthesisToken->dump()
-            );
-        }
-        
-        return $valuesExpressions;
     }
 }
