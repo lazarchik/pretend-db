@@ -78,7 +78,7 @@ class MySQLConnection implements Connection
     public function quote($input, $type=\PDO::PARAM_STR)
     {
         /** TODO: implement dependency on charset of connection */
-        return preg_replace('~[\x00\x0A\x0D\x1A\x22\x27\x5C]~u', '\\\$0', $input);
+        return "'".preg_replace('~[\x00\x0A\x0D\x1A\x22\x27\x5C]~u', '\\\$0', $input)."'";
     }
     
     public function exec($statement)
