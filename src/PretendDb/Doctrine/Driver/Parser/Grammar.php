@@ -47,7 +47,7 @@ class Grammar
     /**
      * @return AbstractOperator[]
      */
-    public function getOperators()
+    public function getOperators(): array
     {
         return [
             new AndOperator(),
@@ -68,11 +68,7 @@ class Grammar
         ];
     }
 
-    /**
-     * @param Token $token
-     * @return AbstractOperator|null
-     */
-    public function findBinaryOperatorFromToken($token)
+    public function findBinaryOperatorFromToken(Token $token): ?AbstractOperator
     {
         foreach ($this->getOperators() as $operatorObject) {
             if ($operatorObject->matchesToken($token) && $operatorObject->isBinary()) {
@@ -83,11 +79,7 @@ class Grammar
         return null;
     }
 
-    /**
-     * @param Token $token
-     * @return AbstractOperator|null
-     */
-    public function findUnaryOperatorFromToken($token)
+    public function findUnaryOperatorFromToken(Token $token): ?AbstractOperator
     {
         foreach ($this->getOperators() as $operatorObject) {
             if ($operatorObject->matchesToken($token) && $operatorObject->isUnary()) {

@@ -9,43 +9,27 @@ use PretendDb\Doctrine\Driver\Parser\Token;
 
 class MultiplicationOperator extends AbstractOperator
 {
-    /**
-     * @return int
-     */
-    public function getPrecedence()
+    public function getPrecedence(): int
     {
         return 12;
     }
 
-    /**
-     * @return bool
-     */
-    public function isUnary()
+    public function isUnary(): bool
     {
         return false;
     }
 
-    /**
-     * @return bool
-     */
-    public function isBinary()
+    public function isBinary(): bool
     {
         return true;
     }
 
-    /**
-     * @return bool
-     */
-    public function isLeftAssociative()
+    public function isLeftAssociative(): bool
     {
         return true;
     }
 
-    /**
-     * @param Token $token
-     * @return bool
-     */
-    public function matchesToken($token)
+    public function matchesToken(Token $token): bool
     {
         return $token->isMultiplication();
     }
@@ -54,7 +38,7 @@ class MultiplicationOperator extends AbstractOperator
      * @param ExpressionInterface[] $operands
      * @return ExpressionInterface
      */
-    public function initAST($operands)
+    public function initAST(array $operands): ExpressionInterface
     {
         return new BinaryArithmeticExpression("*", $operands[0], $operands[1]);
     }

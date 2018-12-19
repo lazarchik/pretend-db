@@ -9,52 +9,32 @@ use PretendDb\Doctrine\Driver\Parser\Token;
 
 class HighPrecedenceNotOperator extends AbstractOperator
 {
-    /**
-     * @return int
-     */
-    public function getPrecedence()
+    public function getPrecedence(): int
     {
         return 15;
     }
 
-    /**
-     * @return bool
-     */
-    public function isUnary()
+    public function isUnary(): bool
     {
         return true;
     }
 
-    /**
-     * @return bool
-     */
-    public function isBinary()
+    public function isBinary(): bool
     {
         return false;
     }
 
-    /**
-     * @return bool
-     */
-    public function isLeftAssociative()
+    public function isLeftAssociative(): bool
     {
         return false;
     }
 
-    /**
-     * @param Token $token
-     * @return bool
-     */
-    public function matchesToken($token)
+    public function matchesToken(Token $token): bool
     {
         return $token->isHighPrecedenceNot();
     }
 
-    /**
-     * @param ExpressionInterface[] $operands
-     * @return ExpressionInterface
-     */
-    public function initAST($operands)
+    public function initAST(array $operands): ExpressionInterface
     {
         return new NotExpression($operands[0]);
     }

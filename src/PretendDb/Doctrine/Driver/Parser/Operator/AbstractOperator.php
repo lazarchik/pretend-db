@@ -8,35 +8,15 @@ use PretendDb\Doctrine\Driver\Parser\Token;
 
 abstract class AbstractOperator
 {
-    /**
-     * @return int
-     */
-    abstract public function getPrecedence();
-
-    /**
-     * @return bool
-     */
-    abstract public function isUnary();
-
-    /**
-     * @return bool
-     */
-    abstract public function isBinary();
-
-    /**
-     * @return bool
-     */
-    abstract public function isLeftAssociative();
-
-    /**
-     * @param Token $token
-     * @return bool
-     */
-    abstract public function matchesToken($token);
+    abstract public function getPrecedence(): int;
+    abstract public function isUnary(): bool;
+    abstract public function isBinary(): bool;
+    abstract public function isLeftAssociative(): bool;
+    abstract public function matchesToken(Token $token): bool;
 
     /**
      * @param ExpressionInterface[] $operands
      * @return ExpressionInterface
      */
-    abstract public function initAST($operands);
+    abstract public function initAST(array $operands): ExpressionInterface;
 }

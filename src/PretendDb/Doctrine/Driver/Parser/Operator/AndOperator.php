@@ -9,43 +9,27 @@ use PretendDb\Doctrine\Driver\Parser\Token;
 
 class AndOperator extends AbstractOperator
 {
-    /**
-     * @return int
-     */
-    public function getPrecedence()
+    public function getPrecedence(): int
     {
         return 4;
     }
 
-    /**
-     * @return bool
-     */
-    public function isUnary()
+    public function isUnary(): bool
     {
         return false;
     }
 
-    /**
-     * @return bool
-     */
-    public function isBinary()
+    public function isBinary(): bool
     {
         return true;
     }
 
-    /**
-     * @return bool
-     */
-    public function isLeftAssociative()
+    public function isLeftAssociative(): bool
     {
         return true;
     }
 
-    /**
-     * @param Token $token
-     * @return bool
-     */
-    public function matchesToken($token)
+    public function matchesToken(Token $token): bool
     {
         return $token->isAnd();
     }
@@ -54,7 +38,7 @@ class AndOperator extends AbstractOperator
      * @param ExpressionInterface[] $operands
      * @return ExpressionInterface
      */
-    public function initAST($operands)
+    public function initAST(array $operands): ExpressionInterface
     {
         return new AndExpression($operands[0], $operands[1]);
     }
