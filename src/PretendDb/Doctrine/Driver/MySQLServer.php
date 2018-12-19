@@ -127,7 +127,7 @@ class MySQLServer
                 return $this->executeAlter($parsedStatement, $boundParams, $connection);
             }
             
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             throw new \RuntimeException(
                 "Can't execute query: ".$queryString
                 ."\n\nCaused by: ".$this->exceptionTracePrettyPrint($e)."\n"
@@ -143,11 +143,11 @@ class MySQLServer
     /**
      * Provide a Java style exception trace
      * From https://secure.php.net/manual/en/exception.gettraceasstring.php
-     * @param \Exception $exception
+     * @param \Throwable $e
      * @param bool true if this is a top level exception and "Caused by" doesn't need to be added
      * @return string
      */
-    protected function exceptionTracePrettyPrint(\Exception $e, bool $isTopLevel = true): string
+    protected function exceptionTracePrettyPrint(\Throwable $e, bool $isTopLevel = true): string
     {
         $result = ($isTopLevel ? "" : "Caused by: ")
             .get_class($e)." at ".$e->getFile().":".$e->getLine().":\n".$e->getMessage()."\n";
