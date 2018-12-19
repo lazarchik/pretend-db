@@ -40,12 +40,10 @@ class Parser
         $unaryOperator = $this->grammar->findUnaryOperatorFromToken($tokens->getCurrentToken());
         
         if ($unaryOperator) {
-            
             $tokens->advanceCursor(); // Skip the unary operator token.
             
             $leftOperand = $unaryOperator->initAST([$this->parseExpression($tokens, $unaryOperator->getPrecedence())]);
         } else {
-            
             $leftOperand = $this->parseSimpleExpressions($tokens);
         }
         
@@ -60,12 +58,17 @@ class Parser
             $rightOperandMinPrecedence = $operatorPrecedence + ($binaryOperator->isLeftAssociative() ? 1 : 0);
             
             if ($binaryOperatorToken->isIn()) {
-                throw new \RuntimeException("IN operator is not supported yet");
+                // IN is special: instead of grouping expression list on the right together
+                // we're sending them as operands 2, 3, 4, etc.
+                $expressionsListOnTheRight = $this->parseExpressionListInParentheses($tokens);
+                $allOperands = $expressionsListOnTheRight;
+                array_unshift($allOperands, $leftOperand);
+                $leftOperand = $binaryOperator->initAST($allOperands);
+            } else {
+                $rightOperand = $this->parseExpression($tokens, $rightOperandMinPrecedence);
+
+                $leftOperand = $binaryOperator->initAST([$leftOperand, $rightOperand]);
             }
-            
-            $rightOperand = $this->parseExpression($tokens, $rightOperandMinPrecedence);
-            
-            $leftOperand = $binaryOperator->initAST([$leftOperand, $rightOperand]);
             
             $binaryOperator = $this->grammar->findBinaryOperatorFromToken($tokens->getCurrentToken());
         }

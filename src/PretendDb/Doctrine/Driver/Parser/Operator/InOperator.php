@@ -2,9 +2,8 @@
 
 namespace PretendDb\Doctrine\Driver\Parser\Operator;
 
-
 use PretendDb\Doctrine\Driver\Parser\Expression\ExpressionInterface;
-use PretendDb\Doctrine\Driver\Parser\Expression\OrExpression;
+use PretendDb\Doctrine\Driver\Parser\Expression\InExpression;
 use PretendDb\Doctrine\Driver\Parser\Token;
 
 class InOperator extends AbstractOperator
@@ -40,6 +39,8 @@ class InOperator extends AbstractOperator
      */
     public function initAST(array $operands): ExpressionInterface
     {
-        return new OrExpression($operands[0], $operands[1]);
+        $expressionsOnTheRight = array_slice($operands, 1);
+        
+        return new InExpression($operands[0], $expressionsOnTheRight);
     }
 }
