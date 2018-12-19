@@ -74,16 +74,7 @@ class MySQLTable
                 continue;
             }
             
-            if (array_key_exists($columnName, $rowFields)) {
-                if (!$columnMeta->isNullable()) {
-                    if (null === $rowFields[$columnName]) {
-                        throw new \RuntimeException("Can't assign null to field that's not nullable: ".$columnName);
-                    }
-                    
-                    $row[$columnIndex] = null;
-                    continue;
-                }
-                
+            if (array_key_exists($columnName, $rowFields) && null !== $rowFields[$columnName]) {
                 $row[$columnIndex] = $rowFields[$columnName];
                 continue;
             }
