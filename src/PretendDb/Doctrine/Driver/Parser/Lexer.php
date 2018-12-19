@@ -5,12 +5,7 @@ namespace PretendDb\Doctrine\Driver\Parser;
 
 class Lexer
 {
-    /**
-     * @param string $queryString
-     * @param string $tokenRegexString
-     * @return string|null
-     */
-    protected function checkTokenRegex($queryString, $tokenRegexString)
+    protected function checkTokenRegex(string $queryString, string $tokenRegexString): ?string
     {
         if (!preg_match("~^(".$tokenRegexString.")~i", $queryString, $tokenSourceStringMatches)) {
             return null;
@@ -19,12 +14,7 @@ class Lexer
         return $tokenSourceStringMatches[1];
     }
     
-    /**
-     * @param string $queryString
-     * @param string $tokenString
-     * @return string|null
-     */
-    protected function checkTokenString($queryString, $tokenString)
+    protected function checkTokenString(string $queryString, string $tokenString): ?string
     {
         if (0 !== stripos($queryString, $tokenString)) {
             return null;
@@ -34,12 +24,7 @@ class Lexer
         return substr($queryString, 0, strlen($tokenString)); 
     }
 
-    /**
-     * @param string $queryString
-     * @return TokenSequence
-     * @throws \RuntimeException
-     */
-    public function parse($queryString)
+    public function parse(string $queryString): TokenSequence
     {
         $queryString = (string)$queryString;
         
@@ -87,11 +72,7 @@ class Lexer
         return $tokens;
     }
 
-    /**
-     * @param string $escapedStringLiteral
-     * @return string
-     */
-    protected function unescapeStringLiteral($escapedStringLiteral)
+    protected function unescapeStringLiteral(string $escapedStringLiteral): string
     {
         $escapedStringLiteralWithoutSurroundingQuotes = trim($escapedStringLiteral, "'\"");
             
@@ -106,12 +87,7 @@ class Lexer
         return $unescapedStringLiteral;
     }
 
-    /**
-     * @param string $queryString
-     * @return Token
-     * @throws \RuntimeException
-     */
-    protected function parseNextToken($queryString)
+    protected function parseNextToken(string $queryString): Token
     {
         if (null !== ($tokenSourceString = $this->checkTokenRegex($queryString, "[ \t\r\n]+"))) {
             return Token::initWhitespace($tokenSourceString);
