@@ -107,8 +107,14 @@ class MySQLTable
     
     public function deleteRow(array $tableRowFields): int
     {
+        $indexedTableRowFields = [];
+        foreach ($tableRowFields as $fieldName => $fieldValue) {
+            $fieldIndex = $this->getColumnIndex($fieldName);
+            $indexedTableRowFields[$fieldIndex] = $fieldValue;
+        }
+        
         foreach ($this->rows as $rowIndex => $row) {
-            if ($row == $tableRowFields) {
+            if ($row == $indexedTableRowFields) {
                 unset($this->rows[$rowIndex]);
                 $this->rows = array_values($this->rows); // reindex, just in case
                 return 1;
