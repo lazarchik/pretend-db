@@ -3,6 +3,7 @@
 namespace PretendDb\Doctrine\Driver\Parser;
 
 
+use PretendDb\Doctrine\Driver\Parser\Expression\CurrentTimestampExpression;
 use PretendDb\Doctrine\Driver\Parser\Expression\ExpressionInterface;
 use PretendDb\Doctrine\Driver\Parser\Expression\FunctionCallExpression;
 use PretendDb\Doctrine\Driver\Parser\Expression\InsertQueryExpression;
@@ -138,6 +139,10 @@ class Parser
         }
         
         if ($currentToken->isIdentifier()) {
+            if ("CURRENT_TIMESTAMP" == strtoupper($currentToken->getSourceString())) {
+                $token = $tokens->getCurrentTokenAndAdvanceCursor(); // skip the CURRENT_TIMESTAMP literal
+                return new CurrentTimestampExpression($token->getSourceString());
+            }
             
             if ($tokens->getNextToken()->isOpeningParenthesis()) {
                 return $this->parseFunctionCallExpression($tokens);
