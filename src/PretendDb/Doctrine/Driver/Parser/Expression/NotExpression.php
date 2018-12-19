@@ -5,13 +5,14 @@ namespace PretendDb\Doctrine\Driver\Parser\Expression;
 
 use PretendDb\Doctrine\Driver\Expression\EvaluationContext;
 
-class NotExpression implements ExpressionInterface
+class NotExpression extends AbstractExpression
 {
     /** @var ExpressionInterface */
     protected $operand;
 
-    public function __construct(ExpressionInterface $operand)
+    public function __construct(string $sourceString, ExpressionInterface $operand)
     {
+        parent::__construct($sourceString);
         $this->operand = $operand;
     }
 

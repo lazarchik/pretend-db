@@ -304,16 +304,20 @@ class MySQLServer
                 foreach ($tableObject->getColumnNames() as $fieldName) {
                     $parsedSelectExpressions[] = [
                         "alias" => $fieldName,
-                        "AST" => new TableFieldExpression($fieldName, $tableNameOrAlias, $databaseName),
+                        "AST" => new TableFieldExpression(
+                            "{no_source}", $fieldName, $tableNameOrAlias, $databaseName
+                        ),
                     ];
                 }
                 
                 continue;
             }
             
+            $selectExpressionAST = $this->parser->parse($selectExpressionInfo->expr);
+            
             $parsedSelectExpressions[] = [
                 "alias" => $selectExpressionInfo->alias ?? $selectExpressionInfo->expr,
-                "AST" => $this->parser->parse($selectExpressionInfo->expr),
+                "AST" => $selectExpressionAST,
             ];
         }
         

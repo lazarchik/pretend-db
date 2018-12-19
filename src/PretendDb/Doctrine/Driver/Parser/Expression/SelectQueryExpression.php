@@ -4,7 +4,7 @@ namespace PretendDb\Doctrine\Driver\Parser\Expression;
 
 use PretendDb\Doctrine\Driver\Expression\EvaluationContext;
 
-class SelectQueryExpression implements ExpressionInterface
+class SelectQueryExpression extends AbstractExpression
 {
     /** @var ExpressionInterface[] */
     protected $selectExpressions;
@@ -16,12 +16,18 @@ class SelectQueryExpression implements ExpressionInterface
     protected $whereExpression;
 
     /**
+     * @param string $sourceString
      * @param ExpressionInterface[] $selectExpressions
      * @param ExpressionInterface[] $fromExpressions
      * @param ExpressionInterface|null $whereExpression
      */
-    public function __construct(array $selectExpressions, array $fromExpressions, ?ExpressionInterface $whereExpression)
-    {
+    public function __construct(
+        string $sourceString,
+        array $selectExpressions,
+        array $fromExpressions,
+        ?ExpressionInterface $whereExpression
+    ) {
+        parent::__construct($sourceString);
         $this->selectExpressions = $selectExpressions;
         $this->fromExpressions = $fromExpressions;
         $this->whereExpression = $whereExpression;

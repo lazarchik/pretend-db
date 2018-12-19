@@ -4,7 +4,7 @@ namespace PretendDb\Doctrine\Driver\Parser\Expression;
 
 use PretendDb\Doctrine\Driver\Expression\EvaluationContext;
 
-class InsertQueryExpression implements ExpressionInterface
+class InsertQueryExpression extends AbstractExpression
 {
     /** @var string */
     protected $tableName;
@@ -19,12 +19,20 @@ class InsertQueryExpression implements ExpressionInterface
     protected $isIgnore;
 
     /**
+     * @param string $sourceString
      * @param string $tableName
      * @param string[] $fieldNames
      * @param ExpressionInterface[][] $valuesLists
+     * @param bool $isIgnore
      */
-    public function __construct(string $tableName, array $fieldNames, array $valuesLists, bool $isIgnore)
-    {
+    public function __construct(
+        string $sourceString,
+        string $tableName,
+        array $fieldNames,
+        array $valuesLists,
+        bool $isIgnore
+    ) {
+        parent::__construct($sourceString);
         $this->tableName = $tableName;
         $this->fieldNames = $fieldNames;
         $this->valuesLists = $valuesLists;

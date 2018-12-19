@@ -34,13 +34,14 @@ class InOperator extends AbstractOperator
     }
 
     /**
+     * @param string $sourceString
      * @param ExpressionInterface[] $operands
      * @return ExpressionInterface
      */
-    public function initAST(array $operands): ExpressionInterface
+    public function initAST(string $sourceString, array $operands): ExpressionInterface
     {
         $expressionsOnTheRight = array_slice($operands, 1);
         
-        return new InExpression($operands[0], $expressionsOnTheRight);
+        return new InExpression($sourceString, $operands[0], $expressionsOnTheRight);
     }
 }

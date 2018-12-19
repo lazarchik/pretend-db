@@ -35,11 +35,12 @@ class OrOperator extends AbstractOperator
     }
 
     /**
+     * @param string $sourceString
      * @param ExpressionInterface[] $operands
      * @return ExpressionInterface
      */
-    public function initAST(array $operands): ExpressionInterface
+    public function initAST(string $sourceString, array $operands): ExpressionInterface
     {
-        return new OrExpression($operands[0], $operands[1]);
+        return new OrExpression($sourceString, $operands[0], $operands[1]);
     }
 }

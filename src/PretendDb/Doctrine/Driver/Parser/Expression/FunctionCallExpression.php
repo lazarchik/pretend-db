@@ -5,7 +5,7 @@ namespace PretendDb\Doctrine\Driver\Parser\Expression;
 
 use PretendDb\Doctrine\Driver\Expression\EvaluationContext;
 
-class FunctionCallExpression implements ExpressionInterface
+class FunctionCallExpression extends AbstractExpression
 {
     /** @var string */
     protected $functionName;
@@ -13,8 +13,9 @@ class FunctionCallExpression implements ExpressionInterface
     /** @var ExpressionInterface[] */
     protected $arguments;
 
-    public function __construct(string $functionName, array $arguments)
+    public function __construct(string $sourceString, string $functionName, array $arguments)
     {
+        parent::__construct($sourceString);
         $this->functionName = $functionName;
         $this->arguments = $arguments;
     }

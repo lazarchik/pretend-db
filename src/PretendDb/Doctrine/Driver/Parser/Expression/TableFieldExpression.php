@@ -5,7 +5,7 @@ namespace PretendDb\Doctrine\Driver\Parser\Expression;
 
 use PretendDb\Doctrine\Driver\Expression\EvaluationContext;
 
-class TableFieldExpression implements ExpressionInterface
+class TableFieldExpression extends AbstractExpression
 {
     /** @var string|null */
     protected $databaseName;
@@ -16,8 +16,9 @@ class TableFieldExpression implements ExpressionInterface
     /** @var string */
     protected $fieldName;
 
-    public function __construct(string $fieldName, ?string $tableName, ?string $databaseName)
+    public function __construct(string $sourceString, string $fieldName, ?string $tableName, ?string $databaseName)
     {
+        parent::__construct($sourceString);
         $this->fieldName = $fieldName;
         $this->tableName = $tableName;
         $this->databaseName = $databaseName;
@@ -34,5 +35,11 @@ class TableFieldExpression implements ExpressionInterface
             (null === $this->databaseName ? "" : $this->databaseName.".")
             .(null === $this->tableName ? "" : $this->tableName.".")
             .$this->fieldName;
+    }
+    
+    public function getDefaultAlias(): string
+    {
+        /** @TODO: detect name conflicts */
+        return $this->fieldName;
     }
 }

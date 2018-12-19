@@ -13,7 +13,7 @@ class TokenSequence
     /** @var int */
     protected $currentTokenIndex = 0;
 
-    public function addToken(Token $token)
+    public function addToken(Token $token): void
     {
         $this->tokens[] = $token;
     }
@@ -69,10 +69,15 @@ class TokenSequence
         return "[".implode(", ", $tokenDumps)."]";
     }
 
-    public function getSourceText(): string
+    public function getCurrentTokenIndex(): int
+    {
+        return $this->currentTokenIndex;
+    }
+
+    public function getSourceText(int $startIndex, int $endIndex): string
     {
         $sourceText = "";
-        foreach ($this->tokens as $token) {
+        foreach (array_slice($this->tokens, $startIndex, $endIndex - $startIndex) as $token) {
             $sourceText .= $token->getSourceString();
         }
         

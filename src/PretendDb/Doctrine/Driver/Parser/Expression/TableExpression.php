@@ -5,7 +5,7 @@ namespace PretendDb\Doctrine\Driver\Parser\Expression;
 
 use PretendDb\Doctrine\Driver\Expression\EvaluationContext;
 
-class TableExpression implements ExpressionInterface
+class TableExpression extends AbstractExpression
 {
     /** @var string|null */
     protected $databaseName;
@@ -16,8 +16,9 @@ class TableExpression implements ExpressionInterface
     /** @var string|null */
     protected $alias;
 
-    public function __construct(string $tableName, ?string $databaseName, ?string $alias)
+    public function __construct(string $sourceString, string $tableName, ?string $databaseName, ?string $alias)
     {
+        parent::__construct($sourceString);
         $this->tableName = $tableName;
         $this->databaseName = $databaseName;
         $this->alias = $alias;

@@ -37,12 +37,18 @@ class Parser
 
     protected function parseExpression(TokenSequence $tokens, int $minPrecedence): ExpressionInterface
     {
+        $startTokenIndex = $tokens->getCurrentTokenIndex();
+        
         $unaryOperator = $this->grammar->findUnaryOperatorFromToken($tokens->getCurrentToken());
         
         if ($unaryOperator) {
+            
             $tokens->advanceCursor(); // Skip the unary operator token.
             
-            $leftOperand = $unaryOperator->initAST([$this->parseExpression($tokens, $unaryOperator->getPrecedence())]);
+            $operand = $this->parseExpression($tokens, $unaryOperator->getPrecedence());
+            $sourceString = $tokens->getSourceText($startTokenIndex, $tokens->getCurrentTokenIndex());
+            
+            $leftOperand = $unaryOperator->initAST($sourceString, [$operand]);
         } else {
             $leftOperand = $this->parseSimpleExpressions($tokens);
         }
@@ -63,11 +69,16 @@ class Parser
                 $expressionsListOnTheRight = $this->parseExpressionListInParentheses($tokens);
                 $allOperands = $expressionsListOnTheRight;
                 array_unshift($allOperands, $leftOperand);
-                $leftOperand = $binaryOperator->initAST($allOperands);
+                
+                $sourceString = $tokens->getSourceText($startTokenIndex, $tokens->getCurrentTokenIndex());
+                
+                $leftOperand = $binaryOperator->initAST($sourceString, $allOperands);
             } else {
                 $rightOperand = $this->parseExpression($tokens, $rightOperandMinPrecedence);
+                
+                $sourceString = $tokens->getSourceText($startTokenIndex, $tokens->getCurrentTokenIndex());
 
-                $leftOperand = $binaryOperator->initAST([$leftOperand, $rightOperand]);
+                $leftOperand = $binaryOperator->initAST($sourceString, [$leftOperand, $rightOperand]);
             }
             
             $binaryOperator = $this->grammar->findBinaryOperatorFromToken($tokens->getCurrentToken());
@@ -131,20 +142,20 @@ class Parser
         if ($currentToken->isNumberLiteral()) {
             $token = $tokens->getCurrentTokenAndAdvanceCursor();
             
-            return new NumberLiteralExpression((float) $token->getSourceString());
+            return new NumberLiteralExpression($token->getSourceString(), (float) $token->getSourceString());
         }
         
         if ($currentToken->isStringLiteral()) {
             
             $token = $tokens->getCurrentTokenAndAdvanceCursor();
         
-            return new StringLiteralExpression((string) $token->getSourceString());
+            return new StringLiteralExpression($token->getSourceString(), (string) $token->getSourceString());
         }
         
         if ($currentToken->isSimplePlaceholder()) {
-            $tokens->advanceCursor(); // Skip the simple placeholder token.
+            $token = $tokens->getCurrentTokenAndAdvanceCursor(); // Skip the simple placeholder token.
             
-            return new SimplePlaceholderExpression();
+            return new SimplePlaceholderExpression($token->getSourceString());
         }
         
         if ($currentToken->isOpeningParenthesis()) {
@@ -202,7 +213,9 @@ class Parser
      */
     protected function parseSubquery(TokenSequence $tokens): SelectQueryExpression
     {
-        $selectToken = $tokens->getCurrentTokenAndAdvanceCursor();
+        $startTokenIndex = $tokens->getCurrentTokenIndex();
+        
+        $subqueryTokens[] = $selectToken = $tokens->getCurrentTokenAndAdvanceCursor();
 
         if (!$selectToken->isSelect()) {
             throw new \RuntimeException(
@@ -252,19 +265,27 @@ class Parser
             );
         }
         
-        return new SelectQueryExpression($selectExpressions, $fromExpressions, $whereExpression);
+        $sourceString = $tokens->getSourceText($startTokenIndex, $tokens->getCurrentTokenIndex());
+        
+        return new SelectQueryExpression($sourceString, $selectExpressions, $fromExpressions, $whereExpression);
     }
     
     protected function parseSelectExprPotentiallyWithAlias(TokenSequence $tokens): SelectExpressionWithOrWithoutAlias
     {
+        $startTokenIndex = $tokens->getCurrentTokenIndex();
+        
         $selectExpression = $this->parseExpression($tokens, 0);
         $selectExprAliasString = $this->parseAliasIfPresent($tokens);
         
-        return new SelectExpressionWithOrWithoutAlias($selectExpression, $selectExprAliasString);
+        $sourceString = $tokens->getSourceText($startTokenIndex, $tokens->getCurrentTokenIndex());
+        
+        return new SelectExpressionWithOrWithoutAlias($sourceString, $selectExpression, $selectExprAliasString);
     }
     
     protected function parseTableNamePotentiallyWithAlias(TokenSequence $tokens): TableExpression
     {
+        $startTokenIndex = $tokens->getCurrentTokenIndex();
+        
         $firstIdentifierToken = $tokens->getCurrentTokenAndAdvanceCursor();
         
         if (!$firstIdentifierToken->isIdentifier()) {
@@ -273,7 +294,8 @@ class Parser
         
         if (!$tokens->getCurrentToken()->isPeriod()) {
             $alias = $this->parseAliasIfPresent($tokens);
-            return new TableExpression($firstIdentifierToken->getSourceString(), null, $alias);
+            $sourceString = $tokens->getSourceText($startTokenIndex, $tokens->getCurrentTokenIndex());
+            return new TableExpression($sourceString, $firstIdentifierToken->getSourceString(), null, $alias);
         }
         
         $tokens->advanceCursor(); // skip period
@@ -285,8 +307,11 @@ class Parser
         }
         
         $alias = $this->parseAliasIfPresent($tokens);
+        
+        $sourceString = $tokens->getSourceText($startTokenIndex, $tokens->getCurrentTokenIndex());
 
         return new TableExpression(
+            $sourceString,
             $secondIdentifierToken->getSourceString(),
             $firstIdentifierToken->getSourceString(),
             $alias
@@ -320,6 +345,8 @@ class Parser
 
     protected function parseFunctionCallExpression(TokenSequence $tokens): FunctionCallExpression
     {
+        $startTokenIndex = $tokens->getCurrentTokenIndex();
+        
         $functionNameToken = $tokens->getCurrentTokenAndAdvanceCursor();
         
         if (!$functionNameToken->isIdentifier()) {
@@ -329,7 +356,9 @@ class Parser
         
         $functionArguments = $this->parseExpressionListInParentheses($tokens);
         
-        return new FunctionCallExpression($functionNameToken->getSourceString(), $functionArguments);
+        $sourceString = $tokens->getSourceText($startTokenIndex, $tokens->getCurrentTokenIndex());
+        
+        return new FunctionCallExpression($sourceString, $functionNameToken->getSourceString(), $functionArguments);
     }
 
     /**
@@ -375,6 +404,8 @@ class Parser
 
     protected function parseTableField(TokenSequence $tokens): TableFieldExpression
     {
+        $startTokenIndex = $tokens->getCurrentTokenIndex();
+        
         $identifierToken1 = $tokens->getCurrentTokenAndAdvanceCursor();
         
         if (!$identifierToken1->isIdentifier()) {
@@ -384,7 +415,10 @@ class Parser
         
         if (!$tokens->getCurrentToken()->isPeriod()) {
             // No table or database name are present
-            return new TableFieldExpression($identifierToken1->getSourceString(), null, null);
+            
+            $sourceString = $tokens->getSourceText($startTokenIndex, $tokens->getCurrentTokenIndex());
+            
+            return new TableFieldExpression($sourceString, $identifierToken1->getSourceString(), null, null);
         }
         
         $tokens->advanceCursor(); // Skip the period token.
@@ -398,7 +432,11 @@ class Parser
         
         if (!$tokens->getCurrentToken()->isPeriod()) {
             // No database name is present
+            
+            $sourceString = $tokens->getSourceText($startTokenIndex, $tokens->getCurrentTokenIndex());
+            
             return new TableFieldExpression(
+                $sourceString,
                 $identifierToken2->getSourceString(),
                 $identifierToken1->getSourceString(),
                 null
@@ -414,7 +452,10 @@ class Parser
                 .$identifierToken3->dump());
         }
         
+        $sourceString = $tokens->getSourceText($startTokenIndex, $tokens->getCurrentTokenIndex());
+        
         return new TableFieldExpression(
+            $sourceString,
             $identifierToken3->getSourceString(),
             $identifierToken2->getSourceString(),
             $identifierToken1->getSourceString()
@@ -434,6 +475,8 @@ class Parser
 
     protected function parseInsertExpression(TokenSequence $tokens): InsertQueryExpression
     {
+        $startTokenIndex = $tokens->getCurrentTokenIndex();
+        
         $isIgnore = false;
         
         $insertToken = $tokens->getCurrentTokenAndAdvanceCursor();
@@ -494,6 +537,8 @@ class Parser
             $tokens->advanceCursor(); // skip comma
         } while (true);
         
-        return new InsertQueryExpression($tableName, $fieldNames, $valuesLists, $isIgnore);
+        $sourceString = $tokens->getSourceText($startTokenIndex, $tokens->getCurrentTokenIndex());
+        
+        return new InsertQueryExpression($sourceString, $tableName, $fieldNames, $valuesLists, $isIgnore);
     }
 }

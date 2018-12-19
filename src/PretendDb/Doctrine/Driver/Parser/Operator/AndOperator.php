@@ -35,11 +35,12 @@ class AndOperator extends AbstractOperator
     }
 
     /**
+     * @param string $sourceString
      * @param ExpressionInterface[] $operands
      * @return ExpressionInterface
      */
-    public function initAST(array $operands): ExpressionInterface
+    public function initAST(string $sourceString, array $operands): ExpressionInterface
     {
-        return new AndExpression($operands[0], $operands[1]);
+        return new AndExpression($sourceString, $operands[0], $operands[1]);
     }
 }

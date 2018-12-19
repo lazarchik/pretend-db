@@ -5,7 +5,7 @@ namespace PretendDb\Doctrine\Driver\Parser\Expression;
 
 use PretendDb\Doctrine\Driver\Expression\EvaluationContext;
 
-class InExpression implements ExpressionInterface
+class InExpression extends AbstractExpression
 {
     /** @var ExpressionInterface */
     protected $leftOperand;
@@ -14,11 +14,13 @@ class InExpression implements ExpressionInterface
     protected $expressionListOnTheRight;
 
     /**
+     * @param string $sourceString
      * @param ExpressionInterface $leftOperand
      * @param ExpressionInterface[] $expressionListOnTheRight
      */
-    public function __construct(ExpressionInterface $leftOperand, array $expressionListOnTheRight)
+    public function __construct(string $sourceString, ExpressionInterface $leftOperand, array $expressionListOnTheRight)
     {
+        parent::__construct($sourceString);
         $this->leftOperand = $leftOperand;
         $this->expressionListOnTheRight = $expressionListOnTheRight;
     }

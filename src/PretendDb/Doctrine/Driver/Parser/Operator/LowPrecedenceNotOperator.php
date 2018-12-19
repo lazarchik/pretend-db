@@ -35,11 +35,12 @@ class LowPrecedenceNotOperator extends AbstractOperator
     }
 
     /**
+     * @param string $sourceString
      * @param ExpressionInterface[] $operands
      * @return ExpressionInterface
      */
-    public function initAST(array $operands): ExpressionInterface
+    public function initAST(string $sourceString, array $operands): ExpressionInterface
     {
-        return new NotExpression($operands[0]);
+        return new NotExpression($sourceString, $operands[0]);
     }
 }

@@ -4,7 +4,7 @@ namespace PretendDb\Doctrine\Driver\Parser\Expression;
 
 use PretendDb\Doctrine\Driver\Expression\EvaluationContext;
 
-class SelectExpressionWithOrWithoutAlias implements ExpressionInterface
+class SelectExpressionWithOrWithoutAlias extends AbstractExpression
 {
     /** @var ExpressionInterface */
     protected $expression;
@@ -12,8 +12,9 @@ class SelectExpressionWithOrWithoutAlias implements ExpressionInterface
     /** @var string|null */
     protected $alias;
 
-    public function __construct(ExpressionInterface $expression, ?string $alias)
+    public function __construct(string $sourceString, ExpressionInterface $expression, ?string $alias)
     {
+        parent::__construct($sourceString);
         $this->expression = $expression;
         $this->alias = $alias;
     }

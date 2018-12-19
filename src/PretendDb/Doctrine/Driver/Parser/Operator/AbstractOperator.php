@@ -15,8 +15,9 @@ abstract class AbstractOperator
     abstract public function matchesToken(Token $token): bool;
 
     /**
+     * @param string $sourceString
      * @param ExpressionInterface[] $operands
      * @return ExpressionInterface
      */
-    abstract public function initAST(array $operands): ExpressionInterface;
+    abstract public function initAST(string $sourceString, array $operands): ExpressionInterface;
 }
