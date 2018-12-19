@@ -312,7 +312,7 @@ class MySQLServer
             }
             
             $parsedSelectExpressions[] = [
-                "alias" => $selectExpressionInfo->alias,
+                "alias" => $selectExpressionInfo->alias ?? $selectExpressionInfo->expr,
                 "AST" => $this->parser->parse($selectExpressionInfo->expr),
             ];
         }
