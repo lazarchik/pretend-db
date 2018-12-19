@@ -104,6 +104,19 @@ class MySQLTable
         
         return $generatedAutoIncrementID;
     }
+    
+    public function deleteRow(array $tableRowFields): int
+    {
+        foreach ($this->rows as $rowIndex => $row) {
+            if ($row == $tableRowFields) {
+                unset($this->rows[$rowIndex]);
+                $this->rows = array_values($this->rows); // reindex, just in case
+                return 1;
+            }
+        }
+        
+        throw new \RuntimeException("Row to delete not found: ".var_export($tableRowFields, true));
+    }
 
     public function findRowsSatisfyingAnExpression(
         ExpressionInterface $expressionAST,

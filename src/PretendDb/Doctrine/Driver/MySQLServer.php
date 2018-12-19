@@ -5,6 +5,7 @@ namespace PretendDb\Doctrine\Driver;
 
 use PhpMyAdmin\SqlParser\Statements\AlterStatement;
 use PhpMyAdmin\SqlParser\Statements\CreateStatement;
+use PhpMyAdmin\SqlParser\Statements\DeleteStatement;
 use PhpMyAdmin\SqlParser\Statements\DropStatement;
 use PhpMyAdmin\SqlParser\Statements\InsertStatement;
 use PhpMyAdmin\SqlParser\Statements\SelectStatement;
@@ -103,6 +104,10 @@ class MySQLServer
                 return $this->executeSelect($parsedStatement, $boundParams, $connection);
             }
 
+            if ($parsedStatement instanceof DeleteStatement) {
+                return $this->executeDelete($parsedStatement, $boundParams, $connection);
+            }
+
             if ($parsedStatement instanceof InsertStatement) {
                 return $this->executeInsert($queryString, $boundParams, $connection);
             }
@@ -168,8 +173,11 @@ class MySQLServer
      * @return MySQLQueryResult
      * @throws \RuntimeException
      */
-    protected function executeSelect($selectStatement, $boundParams, MySQLConnection $connection)
-    {
+    protected function executeSelect(
+        SelectStatement $selectStatement,
+        array $boundParams,
+        MySQLConnection $connection
+    ): MySQLQueryResult {
         $fromStatement = $selectStatement->from[0];
         
         $databaseName = $fromStatement->database;
@@ -370,6 +378,67 @@ class MySQLServer
         
         $queryResultObject = new MySQLQueryResult();
         $queryResultObject->setQueryResultsTable($queryResultsTable);
+        
+        return $queryResultObject;
+    }
+
+    /**
+     * @param DeleteStatement $deleteStatement
+     * @param array $boundParams
+     * @param MySQLConnection $connection
+     * @return MySQLQueryResult
+     * @throws \RuntimeException
+     */
+    protected function executeDelete($deleteStatement, $boundParams, MySQLConnection $connection): MySQLQueryResult
+    {
+        $fromStatement = $deleteStatement->from[0];
+        
+        $databaseName = $fromStatement->database;
+        $tableName = $fromStatement->table;
+        $tableAlias = $fromStatement->alias;
+        $tableObject = $this->getDatabase($databaseName, $connection)->getTable($tableName);
+        
+        $tableNameOrAlias = $tableAlias ?: $tableName;
+        
+        $tableAliases = [$tableNameOrAlias => $tableName];
+        
+        $whereExpressionStrings = [];
+        
+        if (is_array($deleteStatement->where)) {
+            foreach ($deleteStatement->where as $whereExpression) {
+                $whereExpressionStrings[] = $whereExpression->expr;
+            }
+        }
+        
+        $fullWhereConditionString = join(" ", $whereExpressionStrings);
+        
+        if (empty($fullWhereConditionString)) {
+            // In case where clause is missing, just use "1" as the condition. It always evaluates to true.
+            $fullWhereConditionString = "1";
+        }
+        
+        try {
+            $parsedWhereConditionAST = $this->parser->parse($fullWhereConditionString);
+        } catch (\Exception $e) {
+            throw new \RuntimeException("Can't parse WHERE condition: ".$fullWhereConditionString, 0, $e);
+        }
+        
+        // Now just go over all rows in the table and evaluate where condition against each row
+        
+        $evaluationContext = new EvaluationContext();
+        $evaluationContext->setBoundParamValues($boundParams);
+        $evaluationContext->addTableAliases($tableAliases);
+        
+        $plainFoundRows = $tableObject->findRowsSatisfyingAnExpression($parsedWhereConditionAST,
+            $evaluationContext, $databaseName, $tableNameOrAlias);
+        
+        $affectedRowsCount = 0;
+        foreach ($plainFoundRows as $rowNumber => $tableRowFields) {
+            $affectedRowsCount += $tableObject->deleteRow($tableRowFields);
+        }
+        
+        $queryResultObject = new MySQLQueryResult();
+        $queryResultObject->setAffectedRowsCount($affectedRowsCount);
         
         return $queryResultObject;
     }
